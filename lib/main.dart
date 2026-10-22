@@ -1,26 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/theme/app_theme.dart';
-import 'ui/screens/login_screen.dart';
+import 'v1/api_client.dart';
+import 'v1/app.dart';
 
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await dotenv.load(fileName: '.env');
-  } catch (_) {}
-  runApp(const PinguinosAiApp());
+  runApp(PinguinosAiApp(api: ApiClient()));
 }
 
 class PinguinosAiApp extends StatelessWidget {
-  const PinguinosAiApp({super.key});
-
+  final ApiClient api;
+  const PinguinosAiApp({super.key, required this.api});
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Khipu Asistente IA',
+  Widget build(BuildContext context) => MaterialApp(
+      title: 'FINKI',
       debugShowCheckedModeBanner: false,
+      locale: const Locale('es', 'PE'),
+      supportedLocales: const [Locale('es', 'PE')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate
+      ],
       theme: AppTheme.lightTheme,
-      home: const LoginScreen(),
-    );
-  }
+      home: SessionGate(api: api));
 }

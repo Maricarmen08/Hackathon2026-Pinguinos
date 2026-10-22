@@ -17,12 +17,12 @@ class TransactionTile extends StatelessWidget {
         border: Border.all(
           color: item.isIncome
               ? AppTheme.softGreen
-              : AppTheme.softRed.withOpacity(0.8),
+              : AppTheme.softRed.withValues(alpha: 0.8),
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryGreen.withOpacity(0.04),
+            color: AppTheme.primaryGreen.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
