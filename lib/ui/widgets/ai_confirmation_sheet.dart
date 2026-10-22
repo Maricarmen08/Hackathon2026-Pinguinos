@@ -163,7 +163,7 @@ class _AiConfirmationSheetState extends State<AiConfirmationSheet> {
               decoration: BoxDecoration(
                 color: _previewItem.isIncome
                     ? AppTheme.mintBackground
-                    : AppTheme.softRed.withOpacity(0.45),
+                    : AppTheme.softRed.withValues(alpha: 0.45),
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
                   color: _previewItem.isIncome

@@ -95,7 +95,7 @@ class ReportsScreen extends StatelessWidget {
                       flex: ((1 - incomeRatio) * 100).round(),
                       child: Container(
                         height: 16,
-                        color: AppTheme.expenseRed.withOpacity(0.75),
+                        color: AppTheme.expenseRed.withValues(alpha: 0.75),
                       ),
                     ),
                   ],
@@ -130,7 +130,7 @@ class ReportsScreen extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppTheme.softGreen.withOpacity(0.55),
+            color: AppTheme.softGreen.withValues(alpha: 0.55),
             borderRadius: BorderRadius.circular(22),
             border: Border.all(color: AppTheme.primaryGreen, width: 1.2),
           ),

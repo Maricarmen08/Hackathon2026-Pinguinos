@@ -426,3 +426,33 @@ FodyWeavers.xsd
 
 # Official VS Code C# Dev Kit Extension exclusion
 #*.lscache
+
+# Flutter / Android generated files
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+.idea/
+*.iml
+
+# --- FINKI · equipo Pingüinos ---------------------------------------------
+# Secretos locales: solo se versionan las plantillas *.example.
+.env
+.env.*
+!.env.example
+!**/.env.example
+!**/.env.test.example
+# Evidencias, constancias PDF y contador de IA del backend local.
+backend/private/
+# Cachés de Kotlin/Gradle y volcados de la JVM.
+.kotlin/
+hs_err_pid*
+replay_pid*
+# El manifiesto debug de Android es código fuente (permiso INTERNET en desarrollo);
+# la regla genérica [Dd]ebug/ de arriba lo excluía por error.
+!android/app/src/debug/
+# Volcados y copias locales de MySQL: nunca versionar datos reales.
+*.dump
+*.sql.gz
+database/dumps/
+database/local/

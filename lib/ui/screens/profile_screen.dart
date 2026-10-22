@@ -81,7 +81,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 8),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                activeColor: AppTheme.primaryGreen,
+                activeThumbColor: AppTheme.primaryGreen,
                 title: const Text(
                   'Reconocimiento continuo de voz',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
@@ -91,7 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                activeColor: AppTheme.primaryGreen,
+                activeThumbColor: AppTheme.primaryGreen,
                 title: const Text(
                   'Escaneo inteligente de boletas',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),

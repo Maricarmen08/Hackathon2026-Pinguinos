@@ -1,0 +1,36 @@
+{
+  "name": "FINKI",
+  "short_name": "FINKI",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#F4F8FE",
+  "theme_color": "#185FC9",
+  "description": "Las finanzas de tu negocio, claras y al día.",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "sizes": "192x192",
+      "purpose": "any",
+      "src": "icons/Icon-192.png?v=finki-2",
+      "type": "image/png"
+    },
+    {
+      "sizes": "192x192",
+      "purpose": "maskable",
+      "src": "icons/Icon-maskable-192.png?v=finki-2",
+      "type": "image/png"
+    },
+    {
+      "sizes": "512x512",
+      "purpose": "any",
+      "src": "icons/Icon-512.png?v=finki-2",
+      "type": "image/png"
+    },
+    {
+      "sizes": "512x512",
+      "purpose": "maskable",
+      "src": "icons/Icon-maskable-512.png?v=finki-2",
+      "type": "image/png"
+    }
+  ]
+}
