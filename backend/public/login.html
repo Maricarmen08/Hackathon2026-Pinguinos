@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iniciar Sesión - Khipu IA</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div class="phone-device">
+    <div class="app-viewport">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="notch-pill"></div>
+        <div class="status-right">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M2 20h2v-4H2v4zm4 0h2v-7H6v7zm4 0h2v-10h-2v10zm4 0h2V6h-2v14zm4 0h2V2h-2v18z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="7" width="16" height="10" rx="2"/><path d="M21 10v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+
+      <div class="toast-alert" id="toastBox">
+        <span id="toastText"></span>
+      </div>
+
+      <div class="auth-scroll">
+        <div class="brand-mark">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" x2="12" y1="19" y2="22"/>
+          </svg>
+        </div>
+
+        <h1 class="auth-heading">Bienvenido</h1>
+        <p class="auth-desc">Ingresa a la cuenta de tu negocio para gestionar tus finanzas.</p>
+
+        <form novalidate onsubmit="submitLogin(event)">
+          <div class="form-field">
+            <label>TELÉFONO O CORREO</label>
+            <div class="input-box" id="box_login_user">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.58 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              <input type="text" id="usuario" value="987654321" placeholder="Teléfono o correo" oninput="validateLoginUser()" />
+            </div>
+            <div class="field-error" id="err_login_user">Ingresa un teléfono (9 dígitos) o correo válido</div>
+          </div>
+
+          <div class="form-field">
+            <label>CONTRASEÑA</label>
+            <div class="input-box" id="box_login_pass">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <input type="password" id="clave" value="123456" placeholder="Contraseña" oninput="validateLoginPass()" />
+              <button type="button" class="eye-btn" onclick="toggleLoginPass()">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="field-error" id="err_login_pass">Ingresa tu contraseña (mín. 4 caracteres)</div>
+          </div>
+
+          <button type="submit" class="btn-green" style="margin-top: 8px;">
+            <span>Iniciar Sesión</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </button>
+        </form>
+
+        <div class="auth-switch">
+          ¿Aún no tienes cuenta? <a href="/registro.html">Crear cuenta</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    function validateLoginUser() {
+      const val = document.getElementById('usuario').value.trim();
+      const box = document.getElementById('box_login_user');
+      const err = document.getElementById('err_login_user');
+      const ok = val.length >= 6;
+      box.className = 'input-box ' + (ok ? 'valid' : 'invalid');
+      err.className = 'field-error' + (ok ? '' : ' visible');
+      return ok;
+    }
+
+    function validateLoginPass() {
+      const val = document.getElementById('clave').value.trim();
+      const box = document.getElementById('box_login_pass');
+      const err = document.getElementById('err_login_pass');
+      const ok = val.length >= 4;
+      box.className = 'input-box ' + (ok ? 'valid' : 'invalid');
+      err.className = 'field-error' + (ok ? '' : ' visible');
+      return ok;
+    }
+
+    function toggleLoginPass() {
+      const inp = document.getElementById('clave');
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    }
+
+    async function submitLogin(e) {
+      e.preventDefault();
+      if (!validateLoginUser() || !validateLoginPass()) {
+        showToast('Completa tus datos de acceso');
+        return;
+      }
+
+      const usuario = document.getElementById('usuario').value.trim();
+      const clave = document.getElementById('clave').value.trim();
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario, clave })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+          showToast(data.message || 'Credenciales incorrectas');
+          return;
+        }
+
+        if (data.negocio && data.negocio.id) {
+          localStorage.setItem('khipu_negocio_id', data.negocio.id);
+        }
+        window.location.href = '/dashboard.html';
+      } catch (err) {
+        showToast('Error al conectar con el servidor');
+      }
+    }
+  </script>
+</body>
+</html>

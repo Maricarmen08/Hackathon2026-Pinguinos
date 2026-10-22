@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Caja - Khipu IA</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div class="phone-device">
+    <div class="app-viewport">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="notch-pill"></div>
+        <div class="status-right">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M2 20h2v-4H2v4zm4 0h2v-7H6v7zm4 0h2v-10h-2v10zm4 0h2V6h-2v14zm4 0h2V2h-2v18z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="7" width="16" height="10" rx="2"/><path d="M21 10v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+
+      <div class="toast-alert" id="toastBox">
+        <span id="toastText"></span>
+      </div>
+
+      <div class="top-bar">
+        <a href="/perfil.html" class="profile-chip">
+          <div class="avatar-badge" id="headerAvatar">RQ</div>
+          <div>
+            <div class="top-sub" id="headerOwnerName">Hola, Rosa Quispe</div>
+            <div class="top-title" id="headerBizName">Bodega Doña Rosa</div>
+          </div>
+        </a>
+        <a href="/perfil.html" class="icon-circle-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </a>
+      </div>
+
+      <div class="page-scroll">
+        <div class="balance-hero">
+          <div class="hero-caption">Balance disponible hoy</div>
+          <div class="hero-number" id="netBalance">S/ 0.00</div>
+          <div class="hero-grid">
+            <div class="hero-metric">
+              <div class="metric-dot up">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m7 17 10-10"/><path d="M7 7h10v10"/></svg>
+              </div>
+              <div>
+                <div class="metric-lbl">Ventas</div>
+                <div class="metric-val" id="totalIn">S/ 0.00</div>
+              </div>
+            </div>
+            <div class="hero-metric">
+              <div class="metric-dot down">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m17 7-10 10"/><path d="M17 17H7V7"/></svg>
+              </div>
+              <div>
+                <div class="metric-lbl">Gastos</div>
+                <div class="metric-val" id="totalOut">S/ 0.00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pill-filters">
+          <button class="pill-btn active" id="fltAll" onclick="setFilter('ALL')">Todos</button>
+          <button class="pill-btn" id="fltIn" onclick="setFilter('INGRESO')">Ventas</button>
+          <button class="pill-btn" id="fltOut" onclick="setFilter('GASTO')">Gastos</button>
+        </div>
+
+        <div id="txContainer"></div>
+      </div>
+
+      <input type="file" id="receiptFileInput" accept="image/*" style="display: none;" onchange="handleReceiptFile(event)" />
+
+      <div class="floating-actions">
+        <button class="fab-cam" onclick="triggerCamera()" title="Escanear boleta">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+            <circle cx="12" cy="13" r="3"/>
+          </svg>
+        </button>
+        <button class="fab-mic" onclick="openCaptureModal('VOZ')" title="Dictar por voz">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" x2="12" y1="19" y2="22"/>
+          </svg>
+        </button>
+      </div>
+
+      <nav class="bottom-nav">
+        <a href="/dashboard.html" class="nav-link active">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          <span>Caja</span>
+        </a>
+        <a href="/reportes.html" class="nav-link">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>
+          <span>Flujo</span>
+        </a>
+        <a href="/credito.html" class="nav-link">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Crédito</span>
+        </a>
+        <a href="/perfil.html" class="nav-link">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>Perfil</span>
+        </a>
+      </nav>
+
+      <div class="modal-mask" id="captureModal">
+        <div class="modal-panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <div class="clean-card-title" id="modalHeading" style="margin: 0;">Dictar movimiento</div>
+            <button onclick="startSpeechRecognition()" id="micListenBtn" style="background: #ECFDF5; color: #059669; border: none; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer;">
+              Hablar ahora
+            </button>
+          </div>
+
+          <div class="form-field">
+            <div class="input-box">
+              <input type="text" id="rawInput" placeholder="Ej. Vendí 2 aceites a 24 soles" oninput="refreshPreview()" />
+            </div>
+          </div>
+
+          <div class="tx-card" style="margin-bottom: 16px;">
+            <div class="tx-main">
+              <div class="tx-icon-box in" id="prevIconBox">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>
+              </div>
+              <div>
+                <div class="tx-title" id="prevTitle">Aceite vegetal</div>
+                <div class="tx-cat" id="prevCat">Abarrotes</div>
+              </div>
+            </div>
+            <div class="tx-amount in" id="prevPrice">+ S/ 24.00</div>
+          </div>
+
+          <button class="btn-green" onclick="confirmSave()">
+            <span>Guardar</span>
+          </button>
+          <button onclick="closeCaptureModal()" style="width: 100%; border: none; background: none; margin-top: 10px; color: #64748B; font-weight: 700; cursor: pointer;">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    let allTx = [];
+    let currentFilter = 'ALL';
+    let activeSource = 'VOZ';
+    let currentParsed = {};
+    let currentFileName = null;
+
+    async function initDashboard() {
+      await fetchHeaderBusiness();
+      await loadTransactions();
+    }
+
+    async function loadTransactions() {
+      const id = getActiveBusinessId();
+      const res = await fetch(`/api/transacciones?negocio_id=${id}`);
+      allTx = await res.json();
+      renderList();
+    }
+
+    function setFilter(f) {
+      currentFilter = f;
+      document.getElementById('fltAll').className = 'pill-btn' + (f === 'ALL' ? ' active' : '');
+      document.getElementById('fltIn').className = 'pill-btn' + (f === 'INGRESO' ? ' active' : '');
+      document.getElementById('fltOut').className = 'pill-btn' + (f === 'GASTO' ? ' active' : '');
+      renderList();
+    }
+
+    function renderList() {
+      let sumIn = 0;
+      let sumOut = 0;
+
+      allTx.forEach(item => {
+        const m = Number(item.monto || 0);
+        if (item.tipo === 'INGRESO') sumIn += m;
+        else sumOut += m;
+      });
+
+      const net = sumIn - sumOut;
+      document.getElementById('netBalance').textContent = `${net >= 0 ? '+' : '-'} S/ ${Math.abs(net).toFixed(2)}`;
+      document.getElementById('totalIn').textContent = `S/ ${sumIn.toFixed(2)}`;
+      document.getElementById('totalOut').textContent = `S/ ${sumOut.toFixed(2)}`;
+
+      const filtered = allTx.filter(t => currentFilter === 'ALL' || t.tipo === currentFilter);
+      const container = document.getElementById('txContainer');
+      container.innerHTML = '';
+
+      filtered.forEach(item => {
+        const isInc = item.tipo === 'INGRESO';
+        const amount = Number(item.monto || 0);
+        const card = document.createElement('div');
+        card.className = 'tx-card';
+        card.innerHTML = `
+          <div class="tx-main">
+            <div class="tx-icon-box ${isInc ? 'in' : 'out'}">
+              ${isInc
+                ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="m7 17 10-10"/><path d="M7 7h10v10"/></svg>'
+                : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="m17 7-10 10"/><path d="M17 17H7V7"/></svg>'
+              }
+            </div>
+            <div>
+              <div class="tx-title">${item.concepto}</div>
+              <div class="tx-cat">${item.categoria}</div>
+            </div>
+          </div>
+          <div class="tx-amount ${isInc ? 'in' : 'out'}">
+            ${isInc ? '+' : '-'} S/ ${amount.toFixed(2)}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function openCaptureModal(source, presetText) {
+      activeSource = source;
+      document.getElementById('modalHeading').textContent =
+        source === 'VOZ' ? 'Dictar por voz' : 'Boleta escaneada';
+      document.getElementById('micListenBtn').style.display =
+        source === 'VOZ' ? 'inline-block' : 'none';
+      const defaultVal = presetText || (source === 'VOZ'
+        ? 'Vendí 2 aceites a 24 soles'
+        : 'Compra mayorista abarrotes por 48 soles');
+      document.getElementById('rawInput').value = defaultVal;
+      refreshPreview();
+      document.getElementById('captureModal').classList.add('open');
+    }
+
+    function closeCaptureModal() {
+      document.getElementById('captureModal').classList.remove('open');
+    }
+
+    function triggerCamera() {
+      document.getElementById('receiptFileInput').click();
+    }
+
+    function handleReceiptFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      currentFileName = file.name;
+      const baseName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+      openCaptureModal('FOTO_BOLETA', `Boleta ${baseName} por 45 soles`);
+    }
+
+    function startSpeechRecognition() {
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRec) {
+        showToast('Escribe tu dictado directamente en el campo');
+        return;
+      }
+      const recognition = new SpeechRec();
+      recognition.lang = 'es-PE';
+      const btn = document.getElementById('micListenBtn');
+      btn.textContent = 'Escuchando...';
+      recognition.onresult = event => {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById('rawInput').value = transcript;
+        refreshPreview();
+        btn.textContent = 'Hablar ahora';
+      };
+      recognition.onerror = () => {
+        btn.textContent = 'Hablar ahora';
+      };
+      recognition.start();
+    }
+
+    function refreshPreview() {
+      const text = document.getElementById('rawInput').value;
+      currentParsed = parseNaturalText(text, activeSource);
+      if (currentFileName && activeSource === 'FOTO_BOLETA') {
+        currentParsed.nombre_archivo_boleta = currentFileName;
+      }
+      const isInc = currentParsed.tipo === 'INGRESO';
+      document.getElementById('prevTitle').textContent = currentParsed.concepto;
+      document.getElementById('prevCat').textContent = currentParsed.categoria;
+      const pEl = document.getElementById('prevPrice');
+      pEl.textContent = `${isInc ? '+' : '-'} S/ ${currentParsed.monto.toFixed(2)}`;
+      pEl.className = 'tx-amount ' + (isInc ? 'in' : 'out');
+      document.getElementById('prevIconBox').className = 'tx-icon-box ' + (isInc ? 'in' : 'out');
+    }
+
+    async function confirmSave() {
+      await fetch('/api/transacciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentParsed)
+      });
+      closeCaptureModal();
+      await loadTransactions();
+      showToast('Guardado en tu caja');
+    }
+
+    initDashboard();
+  </script>
+</body>
+</html>
+

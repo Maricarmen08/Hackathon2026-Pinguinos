@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crear Cuenta - Khipu IA</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+  <div class="phone-device">
+    <div class="app-viewport">
+      <div class="status-bar">
+        <span>9:41</span>
+        <div class="notch-pill"></div>
+        <div class="status-right">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M2 20h2v-4H2v4zm4 0h2v-7H6v7zm4 0h2v-10h-2v10zm4 0h2V6h-2v14zm4 0h2V2h-2v18z"/></svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="7" width="16" height="10" rx="2"/><path d="M21 10v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+
+      <div class="toast-alert" id="toastBox">
+        <span id="toastText"></span>
+      </div>
+
+      <div class="auth-scroll" style="justify-content: flex-start; padding-top: 10px;">
+        <h1 class="auth-heading">Registrar Negocio</h1>
+        <p class="auth-desc">Completa tus datos para crear tu cuenta.</p>
+
+        <form id="registerForm" novalidate onsubmit="submitRegister(event)">
+          <div class="form-field">
+            <label>TU NOMBRE COMPLETO</label>
+            <div class="input-box" id="box_nombre">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <input type="text" id="nombre_completo" placeholder="Ej. María Flores" oninput="validateName()" />
+            </div>
+            <div class="field-error" id="err_nombre">Ingresa tu nombre y apellido (mín. 3 letras)</div>
+          </div>
+
+          <div class="form-field">
+            <label>NOMBRE DE TU NEGOCIO</label>
+            <div class="input-box" id="box_negocio">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              <input type="text" id="nombre_negocio" placeholder="Ej. Bodega San Martín" oninput="validateBiz()" />
+            </div>
+            <div class="field-error" id="err_negocio">Ingresa el nombre de tu negocio</div>
+          </div>
+
+          <div class="form-field">
+            <label>RUBRO</label>
+            <div class="input-box valid">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+              <select id="rubro">
+                <option value="Bodega y Abarrotes">Bodega y Abarrotes</option>
+                <option value="Puesto de Mercado">Puesto de Mercado</option>
+                <option value="Panadería / Pastelería">Panadería / Pastelería</option>
+                <option value="Ferretería">Ferretería</option>
+                <option value="Comercio Minorista">Comercio Minorista</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label>DNI O RUC</label>
+              <div class="input-box" id="box_doc">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="13" y2="12"/></svg>
+                <input type="text" id="documento_identidad" maxlength="11" placeholder="8 u 11 dígitos" oninput="validateDoc(this)" />
+              </div>
+              <div class="field-error" id="err_doc">8 u 11 números</div>
+            </div>
+
+            <div class="form-field">
+              <label>CELULAR</label>
+              <div class="input-box" id="box_tel">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.58 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                <input type="text" id="telefono" maxlength="9" placeholder="998877665" oninput="validatePhone(this)" />
+              </div>
+              <div class="field-error" id="err_tel">9 dígitos (inicia en 9)</div>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label>CORREO ELECTRÓNICO</label>
+            <div class="input-box" id="box_correo">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+              <input type="email" id="correo" placeholder="ejemplo@correo.com" oninput="validateEmail()" />
+            </div>
+            <div class="field-error" id="err_correo">Ingresa un correo electrónico válido</div>
+          </div>
+
+          <div class="form-field">
+            <label>CONTRASEÑA</label>
+            <div class="input-box" id="box_clave">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <input type="password" id="clave" placeholder="Mínimo 6 caracteres" oninput="validatePass()" />
+              <button type="button" class="eye-btn" onclick="togglePass('clave')">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="field-error" id="err_clave">La contraseña debe tener al menos 6 caracteres</div>
+          </div>
+
+          <button type="submit" class="btn-green" id="btnRegisterSubmit" style="margin-top: 6px;">
+            <span>Crear mi Cuenta</span>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>
+          </button>
+        </form>
+
+        <div class="auth-switch">
+          ¿Ya tienes cuenta? <a href="/login.html">Iniciar sesión</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    function setFieldState(boxId, errId, isValid) {
+      const box = document.getElementById(boxId);
+      const err = document.getElementById(errId);
+      if (isValid) {
+        box.classList.remove('invalid');
+        box.classList.add('valid');
+        err.classList.remove('visible');
+      } else {
+        box.classList.remove('valid');
+        box.classList.add('invalid');
+        err.classList.add('visible');
+      }
+      return isValid;
+    }
+
+    function validateName() {
+      const val = document.getElementById('nombre_completo').value.trim();
+      return setFieldState('box_nombre', 'err_nombre', val.length >= 3);
+    }
+
+    function validateBiz() {
+      const val = document.getElementById('nombre_negocio').value.trim();
+      return setFieldState('box_negocio', 'err_negocio', val.length >= 3);
+    }
+
+    function validateDoc(el) {
+      el.value = el.value.replace(/\D/g, '');
+      const len = el.value.length;
+      return setFieldState('box_doc', 'err_doc', len === 8 || len === 11);
+    }
+
+    function validatePhone(el) {
+      el.value = el.value.replace(/\D/g, '');
+      const ok = /^9\d{8}$/.test(el.value);
+      return setFieldState('box_tel', 'err_tel', ok);
+    }
+
+    function validateEmail() {
+      const val = document.getElementById('correo').value.trim();
+      const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+      return setFieldState('box_correo', 'err_correo', ok);
+    }
+
+    function validatePass() {
+      const val = document.getElementById('clave').value;
+      return setFieldState('box_clave', 'err_clave', val.length >= 6);
+    }
+
+    function togglePass(inputId) {
+      const inp = document.getElementById(inputId);
+      inp.type = inp.type === 'password' ? 'text' : 'password';
+    }
+
+    async function submitRegister(e) {
+      e.preventDefault();
+      const v1 = validateName();
+      const v2 = validateBiz();
+      const v3 = validateDoc(document.getElementById('documento_identidad'));
+      const v4 = validatePhone(document.getElementById('telefono'));
+      const v5 = validateEmail();
+      const v6 = validatePass();
+
+      if (!v1 || !v2 || !v3 || !v4 || !v5 || !v6) {
+        showToast('Revisa los campos marcados en rojo');
+        return;
+      }
+
+      const btn = document.getElementById('btnRegisterSubmit');
+      btn.disabled = true;
+
+      try {
+        const payload = {
+          nombre_completo: document.getElementById('nombre_completo').value.trim(),
+          nombre_negocio: document.getElementById('nombre_negocio').value.trim(),
+          rubro: document.getElementById('rubro').value,
+          documento_identidad: document.getElementById('documento_identidad').value.trim(),
+          telefono: document.getElementById('telefono').value.trim(),
+          correo: document.getElementById('correo').value.trim(),
+          clave: document.getElementById('clave').value
+        };
+
+        const res = await fetch('/api/registro', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+          showToast(data.error || 'El teléfono o correo ya está registrado');
+          btn.disabled = false;
+          return;
+        }
+
+        if (data.negocio && data.negocio.id) {
+          localStorage.setItem('khipu_negocio_id', data.negocio.id);
+        }
+        showToast('Cuenta creada con éxito');
+        setTimeout(() => {
+          window.location.href = '/dashboard.html';
+        }, 600);
+      } catch (err) {
+        showToast('Error de conexión con el servidor');
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
