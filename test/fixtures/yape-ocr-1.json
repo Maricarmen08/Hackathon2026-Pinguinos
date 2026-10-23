@@ -1,7 +1,7 @@
 {
   "synthetic": true,
   "description": "Comprobante totalmente ficticio de diseño habitual; textos y coordenadas de ensayo, sin captura personal.",
-  "text": "COMPROBANTE FICTICIO - SIN VALIDEZ\n¡Yapeaste!\nS/ 17\nCLIENTE DEMOSTRACION\n15 ene. 2026 | 10:10 a. m.\nCODIGO DE SEGURIDAD\nDATOS DE LA TRANSACCION\nNro. de celular\nDestino\nNro. de operación\nPROMOCION FICTICIA\nSOLO DATOS DE ENSAYO\n0 0 0\n*** *** 000\nYape\n00000042\nS/ 4.90\nMás en Yape Nuevo",
+  "text": "COMPROBANTE FICTICIO - SIN VALIDEZ\n¡Yapeaste!\nS/ 17\nCLIENTE DEMOSTRACION\n15 ene. 2026 | 10:10 a. m.\nCODIGO DE SEGURIDAD\nDATOS DE LA TRANSACCION\nNro. de celular\nDestino\nNro. de operación\nPROMOCION FICTICIA\nSOLO DATOS DE ENSAYO\n0 0 0\n*** *** 000\nYape\n00000042\nPROMO 3.50\nMás en Yape Nuevo",
   "lines": [
     {
       "text": "COMPROBANTE FICTICIO - SIN VALIDEZ",
@@ -132,7 +132,7 @@
       "angle": 0
     },
     {
-      "text": "S/ 4.90",
+      "text": "PROMO 3.50",
       "left": 490,
       "top": 1040,
       "right": 650,

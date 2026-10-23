@@ -7,7 +7,7 @@ import 'package:hackathon_pinguinos_mvp/v1/ocr_layout.dart';
 
 void main() {
   for (var i = 0; i < 2; i++) {
-    test('Yape formato ${i == 0 ? 'ficticio' : 'habitual sintético'}: OCR Android y reglas',
+    test('Yape formato ${i == 0 ? 'ficticio' : 'habitual sintético'}: filas sintéticas y reglas',
         () {
       // Synthetic payment layouts; no personal screenshot or transaction. No network.
       final fixture =
