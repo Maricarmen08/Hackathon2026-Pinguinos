@@ -16,7 +16,9 @@ repositorio público y no se necesita para ejecutar las pruebas.
 
 Ambos están marcados con `synthetic: true`. El segundo usa destinatario
 «CLIENTE DEMOSTRACION», teléfono «*** *** 000» y código de seguridad «0 0 0».
-Su promoción ficticia de S/ 4.90 no debe sustituir al importe principal.
+Su texto publicitario ficticio «PROMO 3.50», sin marcador monetario en esta
+entrada de ensayo, no debe sustituir al importe principal. Si hay dos importes
+monetarios explícitos incompatibles, se mantiene la revisión por ambigüedad.
 
 ## Regresiones conservadas
 
