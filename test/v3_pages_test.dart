@@ -64,15 +64,15 @@ void main() {
     await t.pumpAndSettle();
     expect(sent!['tipo'], 'GENERAR_CONSTANCIA');
     expect(sent!['payload']['desde'], today);
-    await t.scrollUntilVisible(find.text('Abrir o descargar PDF'),150,scrollable:find.byType(Scrollable).first);
+    await t.scrollUntilVisible(find.text('Abrir o descargar PDF'), 150,
+        scrollable: find.byType(Scrollable).first);
     expect(find.text('Abrir o descargar PDF'), findsOneWidget);
     await t.scrollUntilVisible(find.text('Compartir constancia'), 150,
         scrollable: find.byType(Scrollable).first);
     expect(find.text('Compartir constancia'), findsOneWidget);
     expect(t.takeException(), isNull);
   });
-  testWidgets(
-      'Gemini muestra consentimiento y solo crea propuesta al interpretar texto',
+  testWidgets('interpretación local sin consentimiento ni solicitudes externas',
       (t) async {
     final posts = <String>[];
     final api = ApiClient(
@@ -113,22 +113,20 @@ void main() {
     expect(find.text('Cómo se usan mis datos'), findsOneWidget);
     expect(find.textContaining('a Gemini'), findsNothing);
     expect(posts, isEmpty);
-    await t.tap(find.byType(CheckboxListTile));
     await t.enterText(find.byType(TextField), 'Hoy vendí 45 soles de gaseosas');
     await t.scrollUntilVisible(find.text('Interpretar'), 200,
         scrollable: find.byType(Scrollable).first);
+    await t.pumpAndSettle();
     await t.tap(find.text('Interpretar'));
     await t.pumpAndSettle();
-    expect(posts.length, 1);
-    expect(posts.single, endsWith('/ia/analizar'));
+    expect(posts, isEmpty);
     await t.scrollUntilVisible(find.text('Esto entendí'), 150,
         scrollable: find.byType(Scrollable).first);
     expect(find.text('Esto entendí'), findsOneWidget);
     expect(t.takeException(), isNull);
     await t.pumpWidget(const SizedBox());
   });
-  testWidgets(
-      'IA desactivada informa configuración y no envía audio ni imágenes',
+  testWidgets('proveedor desactivado conserva captura e interpretación local',
       (t) async {
     var posts = 0;
     final api = ApiClient(
@@ -147,10 +145,16 @@ void main() {
             categories: const [],
             people: const [])));
     await t.pumpAndSettle();
-    expect(find.textContaining('no está disponible por ahora'), findsOneWidget);
     final button =
         t.widget<FilledButton>(find.widgetWithText(FilledButton, 'Hablar'));
-    expect(button.onPressed, isNull);
+    expect(button.onPressed, isNotNull);
+    await t.enterText(find.byType(TextField), 'Gasté 20 soles en luz');
+    await t.scrollUntilVisible(find.text('Interpretar'), 160,
+        scrollable: find.byType(Scrollable).first);
+    await t.pumpAndSettle();
+    await t.tap(find.text('Interpretar'));
+    await t.pumpAndSettle();
+    expect(find.text('Revisar gasto'), findsOneWidget);
     expect(posts, 0);
     expect(t.takeException(), isNull);
     await t.pumpWidget(const SizedBox());

@@ -1,0 +1,151 @@
+{
+  "synthetic": true,
+  "description": "Comprobante totalmente ficticio de diseño habitual; textos y coordenadas de ensayo, sin captura personal.",
+  "text": "COMPROBANTE FICTICIO - SIN VALIDEZ\n¡Yapeaste!\nS/ 17\nCLIENTE DEMOSTRACION\n15 ene. 2026 | 10:10 a. m.\nCODIGO DE SEGURIDAD\nDATOS DE LA TRANSACCION\nNro. de celular\nDestino\nNro. de operación\nPROMOCION FICTICIA\nSOLO DATOS DE ENSAYO\n0 0 0\n*** *** 000\nYape\n00000042\nS/ 4.90\nMás en Yape Nuevo",
+  "lines": [
+    {
+      "text": "COMPROBANTE FICTICIO - SIN VALIDEZ",
+      "left": 30,
+      "top": 30,
+      "right": 630,
+      "bottom": 58,
+      "angle": 0
+    },
+    {
+      "text": "¡Yapeaste!",
+      "left": 40,
+      "top": 220,
+      "right": 220,
+      "bottom": 260,
+      "angle": 0
+    },
+    {
+      "text": "S/ 17",
+      "left": 40,
+      "top": 290,
+      "right": 230,
+      "bottom": 354,
+      "angle": 0
+    },
+    {
+      "text": "CLIENTE DEMOSTRACION",
+      "left": 40,
+      "top": 400,
+      "right": 410,
+      "bottom": 428,
+      "angle": 0
+    },
+    {
+      "text": "15 ene. 2026 | 10:10 a. m.",
+      "left": 40,
+      "top": 460,
+      "right": 460,
+      "bottom": 488,
+      "angle": 0
+    },
+    {
+      "text": "CODIGO DE SEGURIDAD",
+      "left": 40,
+      "top": 540,
+      "right": 340,
+      "bottom": 568,
+      "angle": 0
+    },
+    {
+      "text": "DATOS DE LA TRANSACCION",
+      "left": 40,
+      "top": 610,
+      "right": 470,
+      "bottom": 638,
+      "angle": 0
+    },
+    {
+      "text": "Nro. de celular",
+      "left": 40,
+      "top": 680,
+      "right": 280,
+      "bottom": 708,
+      "angle": 0
+    },
+    {
+      "text": "Destino",
+      "left": 40,
+      "top": 740,
+      "right": 210,
+      "bottom": 768,
+      "angle": 0
+    },
+    {
+      "text": "Nro. de operación",
+      "left": 40,
+      "top": 800,
+      "right": 340,
+      "bottom": 828,
+      "angle": 0
+    },
+    {
+      "text": "PROMOCION FICTICIA",
+      "left": 40,
+      "top": 990,
+      "right": 410,
+      "bottom": 1018,
+      "angle": 0
+    },
+    {
+      "text": "SOLO DATOS DE ENSAYO",
+      "left": 40,
+      "top": 1150,
+      "right": 440,
+      "bottom": 1178,
+      "angle": 0
+    },
+    {
+      "text": "0 0 0",
+      "left": 500,
+      "top": 540,
+      "right": 620,
+      "bottom": 568,
+      "angle": 0
+    },
+    {
+      "text": "*** *** 000",
+      "left": 490,
+      "top": 680,
+      "right": 650,
+      "bottom": 708,
+      "angle": 0
+    },
+    {
+      "text": "Yape",
+      "left": 580,
+      "top": 740,
+      "right": 670,
+      "bottom": 768,
+      "angle": 0
+    },
+    {
+      "text": "00000042",
+      "left": 500,
+      "top": 800,
+      "right": 670,
+      "bottom": 828,
+      "angle": 0
+    },
+    {
+      "text": "S/ 4.90",
+      "left": 490,
+      "top": 1040,
+      "right": 650,
+      "bottom": 1068,
+      "angle": 0
+    },
+    {
+      "text": "Más en Yape Nuevo",
+      "left": 40,
+      "top": 940,
+      "right": 370,
+      "bottom": 968,
+      "angle": 0
+    }
+  ]
+}

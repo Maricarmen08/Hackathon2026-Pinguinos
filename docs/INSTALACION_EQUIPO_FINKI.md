@@ -20,8 +20,8 @@ Tu cuenta y tu negocio los creas tú desde la app.
 | [Git](https://git-scm.com/download/win) | cualquiera reciente | Clonar el repositorio |
 | [Laragon](https://laragon.org/download/) | con **MySQL 8.4** | Base de datos |
 | [Node.js](https://nodejs.org/) | **22 o superior** (LTS) | Backend Express |
-| [Flutter](https://docs.flutter.dev/get-started/install/windows) | **3.47 o superior** | App móvil/web |
-| Android Studio o solo el SDK de Android | opcional | Probar en un teléfono |
+| [Flutter](https://docs.flutter.dev/get-started/install/windows) | **3.47.7**, versión comprobada | App móvil/web |
+| Android Studio o SDK de Android | necesario para Android | Instalar las plataformas/Build Tools que solicite Flutter |
 | Google Chrome | opcional | Probar la versión web |
 
 Comprueba en PowerShell:
@@ -29,7 +29,8 @@ Comprueba en PowerShell:
 ```powershell
 git --version
 node --version      # debe decir v22 o superior
-flutter --version   # debe decir 3.47 o superior
+flutter --version   # versión comprobada: 3.47.7
+flutter doctor -v
 ```
 
 ## 2. Abrir Laragon e iniciar MySQL
@@ -46,9 +47,17 @@ flutter --version   # debe decir 3.47 o superior
 
 ```powershell
 cd D:\              # o la carpeta que prefieras
-git clone https://github.com/Maricarmen08/Hackathon2026-Pinguinos.git
+git clone --branch danny --single-branch https://github.com/Maricarmen08/Hackathon2026-Pinguinos.git
 cd Hackathon2026-Pinguinos
+git branch --show-current   # debe decir danny
 ```
+
+La versión descrita en esta guía se prepara en **`danny`**. Clonarla después de
+que el equipo confirme su publicación: antes del push solo está disponible la
+versión anterior. `main` puede conservar otra versión hasta que el equipo apruebe
+su integración. No cambies de rama ni hagas merge para seguir esta instalación.
+Si ya tienes un clon con cambios locales, consérvalo y consulta al equipo antes
+de actualizar; no uses reset, clean ni sobrescribas tu trabajo.
 
 ## 4. Importar la base de datos (un solo archivo)
 
@@ -62,11 +71,16 @@ No trae usuarios ni datos.
 3. Pulsa **Ejecutar** (F9). Ejecuta el archivo completo, no una parte.
 4. Pulsa F5 en el panel izquierdo: aparece `hackathon_pinguinos_dev`.
 
-**O con la consola de Laragon** (botón *Terminal*):
+**O desde PowerShell**, en la raíz del repositorio, con `mysql.exe` en PATH
+(puedes abrir la terminal de Laragon):
 ```powershell
-mysql -u root -p < database\hackathon_pinguinos_dev.sql
+mysql.exe --host=127.0.0.1 --port=3306 --user=root --password --default-character-set=utf8mb4 --execute="SOURCE database/hackathon_pinguinos_dev.sql"
 ```
-(Pulsa Enter si la contraseña está vacía).
+Escribe tu contraseña cuando la solicite (Enter si está vacía). No la pongas
+en el comando ni la compartas. Usa `SOURCE` con barras `/`; la redirección `<`
+no funciona en PowerShell. Si `mysql.exe` no está en PATH, usa el ejecutable de
+tu instalación de Laragon con `& 'ruta/completa/mysql.exe'` y los mismos argumentos,
+o utiliza HeidiSQL. No ejecutes este paso sobre una base ya instalada.
 
 Comprueba en HeidiSQL:
 ```sql
@@ -116,12 +130,18 @@ dos secretos distintos para `JWT_SECRET` y `JWT_REFRESH_SECRET`:
 node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 ```
 
-**Inteligencia artificial (opcional):** la app funciona completa sin IA
-(`AI_ENABLED=0`). Si el equipo decide probar Gemini, cada persona usa **su
+**Ayuda externa de IA (opcional):** con `AI_ENABLED=0` funcionan los formularios,
+las reglas locales, la voz/OCR locales en Android y las consultas deterministas
+del negocio. El acceso a registros y su sincronización requiere el backend;
+los datos locales en caché pueden estar desactualizados. Si el equipo decide probar Gemini, cada persona usa **su
 propia clave** de Google AI Studio en su `.env`. Nunca compartas claves por
 chat ni las subas a GitHub. Detalles en `docs/GEMINI_SETUP.md`.
 
 `backend/.env` está en `.gitignore`: **no se sube a GitHub**.
+Tampoco se comparten `.env.test`, secretos JWT, claves API ni el directorio privado
+del backend. Si ya existe `.env`, `configure` no lo sobrescribe: revisa tu copia
+local en lugar de borrarla. El correo asociado permite acceso con contraseña,
+pero no se acredita titularidad del buzón ni se ofrece recuperación por correo.
 
 ## 7. Comprobar la conexión del backend
 
@@ -149,6 +169,7 @@ Abre **otra** ventana de PowerShell en la raíz del repositorio:
 
 ```powershell
 flutter pub get
+flutter doctor --android-licenses   # solo si faltan las licencias del SDK
 ```
 
 **En Chrome** (puerto fijo para que el backend lo acepte):
@@ -160,7 +181,8 @@ flutter run -d chrome --web-hostname=localhost --web-port=5173 --dart-define=API
 ```powershell
 adb devices
 adb reverse tcp:3000 tcp:3000
-flutter run -d <ID_DEL_TELEFONO> --dart-define=API_BASE_URL=http://127.0.0.1:3000/api/v1
+$deviceId = 'REEMPLAZA_POR_EL_ID_QUE_MUESTRA_ADB'
+flutter run -d $deviceId --dart-define=API_BASE_URL=http://127.0.0.1:3000/api/v1
 ```
 Repite `adb reverse` cada vez que reconectes el cable. En PCs con poca memoria,
 usa `.\tool\flutter-local.ps1` en lugar de `flutter` (ver `docs/ANDROID_LOW_MEMORY.md`).
@@ -170,7 +192,49 @@ usa `.\tool\flutter-local.ps1` en lugar de `flutter` (ver `docs/ANDROID_LOW_MEMO
 flutter run -d emulator-5554 --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1
 ```
 
+### Voz offline, OCR y límites de Android
+
+- La APK comprobada es **debug arm64**, con Android mínimo API 24 (Android 7.0).
+  Usa un teléfono compatible y concede permiso de micrófono solo al utilizar voz.
+- El modelo español **Vosk pequeño 0.42 ya está incluido** en
+  `android/app/src/main/assets/vosk-model-small-es-0.42.zip`; no hay que descargarlo
+  en el teléfono. No lo borres, descomprimas dentro del repositorio ni lo sustituyas.
+  El archivo pesa **39.817.833 bytes**; Gradle verifica este SHA-256 antes de compilar:
+  `09b239888f633ef2f0b4e09736e3d9936acfd810bc65d53fad45261762c6511f`.
+- Conserva `VOSK_LICENSE.txt` y `VOSK_NOTICE.txt` junto al modelo (Apache 2.0).
+  Puedes comprobarlo con `Get-FileHash android/app/src/main/assets/vosk-model-small-es-0.42.zip -Algorithm SHA256`.
+- Gradle obtiene **Vosk Android 0.3.75** y **JNA 5.18.1**. La primera compilación
+  necesita internet para herramientas y dependencias; no equivale a necesitar
+  internet para reconocer voz después. Flutter ya declara el puente de ML Kit
+  y sus dependencias en `pubspec.yaml` / `pubspec.lock`; usa `flutter pub get`.
+- En el primer uso, FINKI verifica y extrae el modelo en almacenamiento privado
+  (unos 60,3 MB extraídos, además de la APK). Necesita espacio y memoria disponibles.
+  La preparación puede tardar; espera a que indique que está grabando.
+- Se prefiere el reconocedor nativo **on-device** cuando Android admite español;
+  Vosk proporciona el respaldo local. No se envía audio a Gemini automáticamente.
+  La ayuda por internet requiere conexión y consentimiento explícito.
+- ML Kit latino va incluido para OCR local. Voz y OCR locales son funciones de
+  **Android**; Chrome no sustituye esa validación. Vosk puede transcribir mal,
+  especialmente con ruido: corrige la propuesta y revísala antes de confirmar.
+  El límite de grabación actual es 45 segundos; no se confirma ningún movimiento
+  solo por terminar de hablar o reconocer una imagen.
+- Para comprobar independencia de red, usa modo avión y Wi-Fi apagado. El cable
+  USB con `adb reverse` todavía permite llegar al backend: una respuesta del backend
+  por USB no demuestra por sí sola que el reconocimiento fue local.
+- En equipos de poca RAM sigue [ANDROID_LOW_MEMORY.md](ANDROID_LOW_MEMORY.md):
+  una sola tarea Flutter/Gradle, sin clean ni eliminación de cachés. No actualices
+  Flutter/Gradle/Kotlin por tu cuenta para resolver avisos de versiones futuras.
+
+Detalles de la implementación y las pruebas: [FINKI_OFFLINE_FINAL.md](FINKI_OFFLINE_FINAL.md)
+y [FINKI_VOICE_SESSION_FIX.md](FINKI_VOICE_SESSION_FIX.md). Sus apartados históricos
+no sustituyen los requisitos actuales de esta guía. El backend necesita permiso
+para escribir su almacenamiento privado (fotografías/evidencias/PDF), que nunca
+debe servirse como carpeta pública ni incluirse en GitHub.
+
 ## 10. Comprobar que todo funciona
+
+Realiza este recorrido solo en **tu instalación nueva** o en un negocio de ensayo;
+no introduzcas operaciones ficticias en el negocio real de otra integrante.
 
 1. En la app pulsa **«Soy nuevo · Registrarme»** y crea **tu** cuenta
    (contraseña de 12 caracteres como mínimo).
@@ -220,3 +284,4 @@ conserva para inspección; contiene solo datos de ensayo.
 | `root o contraseña vacía requieren …` | Usa el usuario del paso 5, o deja `NODE_ENV=development` y `HOST=127.0.0.1`. |
 | La app web no conecta (CORS) | Ejecuta Flutter con `--web-port=5173` y deja `CORS_ORIGINS=http://localhost:5173`. |
 | El teléfono no conecta | Repite `adb reverse tcp:3000 tcp:3000` y verifica que Express siga abierto. |
+| Falta el modelo offline o falla su hash | Confirma que clonaste la versión publicada de `danny` y que el ZIP tiene el tamaño/hash indicados; no sustituyas el modelo por otro. |

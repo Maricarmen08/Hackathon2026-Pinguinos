@@ -456,3 +456,17 @@ replay_pid*
 *.sql.gz
 database/dumps/
 database/local/
+
+# Entregables y datos privados locales: conservarlos en disco, no publicarlos.
+/output/
+*.pdf
+/private/
+/uploads/
+/captures/
+/screenshots/
+**/profile-photos/
+**/finki_evidence/
+*.sqlite
+*.sqlite3
+*.db
+*.log

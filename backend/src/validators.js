@@ -11,6 +11,7 @@ const normalizePhone = v => /^9[0-9]{8}$/.test(v)?'+51'+v:v.startsWith('+')?v:'+
 const phone = z.string().trim().regex(/^\+?[1-9][0-9]{7,14}$/).transform(normalizePhone);
 const email = z.string().trim().email().max(254).transform(v => v.toLowerCase());
 const password = z.string().min(12).max(128);
+const changePassword = z.object({actual:z.string().min(1).max(128),nueva:password,confirmacion:password}).strict().refine(v=>v.nueva===v.confirmacion,'Las contraseñas no coinciden').refine(v=>v.nueva!==v.actual,'Elige una contraseña diferente');
 const device = z.object({ nombre: text(100), plataforma: z.enum(['ANDROID','IOS','WEB','OTRO']) }).strict();
 const register = z.object({ nombre: text(120), telefono: phone, correo: nullable(email), clave: password, dispositivo: device }).strict();
 const login = z.object({ usuario: text(254).transform(v => /^[+]?[1-9][0-9]{7,14}$/.test(v)?normalizePhone(v):v.toLowerCase()), clave: z.string().min(1).max(128), dispositivo: device }).strict();
@@ -29,6 +30,7 @@ const version = z.string().regex(/^[1-9][0-9]{0,18}$/);
 const profile = z.object({ expected_version: version, nombre: text(120).optional(), telefono: phone.optional(), correo: nullable(email).optional() }).strict().refine(v => ['nombre','telefono','correo'].some(k => k in v), 'Incluir un campo de perfil');
 const voidPayload = z.object({ id: uuid, expected_version: version, motivo: text(300) }).strict();
 const payloads = {
+  CONFIRMAR_PROPUESTA_LOCAL: z.object({entrada:z.object({id_local:uuid,tipo:z.enum(['TEXTO','VOZ','IMAGEN']),texto:text(6000),propuesta:z.unknown().transform(value=>require('./services/ai-provider').validateProposal(value))}).strict(),comprobante_id:nullable(uuid),tipo:z.enum(['REGISTRAR_OPERACION','REGISTRAR_COBRO','REGISTRAR_PAGO','REGISTRAR_TRANSFERENCIA','VINCULAR_EVIDENCIA']),datos:z.unknown()}).strict().transform(p=>({...p,datos:p.tipo==='VINCULAR_EVIDENCIA'?z.object({tabla:z.enum(['operaciones','movimientos']),id:uuid}).strict().parse(p.datos):payloads[p.tipo].parse(p.datos)})),
   CONFIRMAR_PROPUESTA: z.object({extraccion_id:uuid,tipo:z.enum(['REGISTRAR_OPERACION','REGISTRAR_COBRO','REGISTRAR_PAGO','REGISTRAR_TRANSFERENCIA','VINCULAR_EVIDENCIA']),datos:z.unknown()}).strict().transform(p=>({...p,datos:p.tipo==='VINCULAR_EVIDENCIA'?z.object({tabla:z.enum(['operaciones','movimientos']),id:uuid}).strict().parse(p.datos):payloads[p.tipo].parse(p.datos)})),
   GENERAR_CONSTANCIA: z.object({id:uuid,desde:date,hasta:date}).strict(),
   CREAR_NEGOCIO: business,
@@ -53,4 +55,4 @@ const filters = z.object({
   offset: z.coerce.number().int().min(0).max(10000).default(0),
   direccion: z.enum(['COBRAR','PAGAR']).optional(), estado: z.enum(['CONFIRMADO','ANULADO']).optional()
 }).strict().refine(v => !v.desde || !v.hasta || v.desde <= v.hasta, 'Período invertido');
-module.exports = { uuid, register, login, refresh, business, command, filters, date, profile };
+module.exports = { uuid, register, login, refresh, business, command, filters, date, profile, changePassword };

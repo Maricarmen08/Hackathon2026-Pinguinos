@@ -1,36 +1,57 @@
 'use strict';
 const {buildReport}=require('./queries');
-const {today}=require('../domain');
+
 const {soles}=require('./certificate');
 const {fail}=require('../errors');
 const shift=(d,n)=>new Date(Date.parse(d+'T00:00:00Z')+n*86400000).toISOString().slice(0,10);
-function answer(business,data,question,categories=[]){
-  const q=question.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase(),end=today(business.zona_horaria),month=end.slice(0,7)+'-01';
-  const report=(a,b)=>buildReport(business,...data,a,b),current=report(month,end);
-  if(q.includes('producto')&&q.includes('vend'))return {respuesta:'Todavía no puedo comparar productos: tus registros no detallan cantidades por producto. Puedo mostrarte tus ventas totales sin inventar un ranking.',datos_suficientes:false,indicadores:current};
-  if(q.includes('gast')&&q.includes('semana')&&!q.includes('resumen')){
-    const dow=new Date(end+'T00:00:00Z').getUTCDay(),start=shift(end,-((dow+6)%7)),r=report(start,end);
-    return {respuesta:`Esta semana registraste ${soles(r.gastos_minor)} en gastos de funcionamiento y ${soles(r.compras_minor)} en compras de mercadería. Son registros de gastos y compras, no la suma de sus pagos.`,desde:start,hasta:end,indicadores:r};
+const {period,businessToday,normalize,morning}=require('./insights-period');
+// Whitelisted intents and date grammar. No generated SQL or external provider.
+function answer(business,data,question,categories=[],people=[],asOf=businessToday(business)){
+  const q=normalize(question),end=asOf;
+  if(/\b(drop|select|insert|update|delete|alter|sql)\b/.test(q))fail(422,'QUESTION_UNSUPPORTED','Solo puedo consultar indicadores del negocio seleccionado.');
+  const conversational=q.replace(/[¿?¡!.,]/g,'').trim();
+  if(/^(hola|buenos dias|buenas tardes|buenas noches|quien eres|que eres|como te llamas|quien soy|quien soy yo)$/.test(conversational))return {
+    respuesta:/^quien soy/.test(conversational)?'Puedes ver tus datos en Perfil. Aquí te ayudo a revisar las cuentas de tu negocio.':'Soy Finki, tu asistente para consultar ventas, gastos y fiados de tu negocio. ¿Qué quieres revisar?',
+    fuente:'ORIENTACION',datos_suficientes:false
+  };
+  if(/predec|pronostic|\bmanana\b|proxim|banco|credito me dar|clima/.test(q.replace(/esta manana|hoy (?:en|por) la manana/g,'')))fail(422,'QUESTION_UNSUPPORTED','No puedo predecir ventas, consultar bancos ni asegurar créditos. Puedo resumir los registros de tu negocio.');
+  const [from,to]=period(q,end),report=(a,b)=>buildReport(business,...data,a,b),r=report(from,to);
+  const rows=data[0].filter(o=>o.estado==='CONFIRMADO'&&o.fecha_operacion>=from&&o.fecha_operacion<=to);
+  const sufficient=rows.length>0||data[1].some(m=>m.estado==='CONFIRMADO'&&m.fecha_movimiento>=from&&m.fecha_movimiento<=to);
+  const day=d=>d.split('-').reverse().join('/'),label=from===to?day(to):`${day(from)} al ${day(to)}`;
+  const prefix=`Del ${label}: `;
+  const coverage=from<business.inicio_historial?` Historial disponible desde ${day(business.inicio_historial)}; el periodo está incompleto.`:'';
+  const result=(text,extra={},stock=false)=>({respuesta:text+(stock?'':coverage||(!sufficient?' Sin movimientos registrados en ese periodo.':''))+(morning(q)?' No separo por horas: muestro el día completo.':''),desde:from,hasta:to,datos_suficientes:sufficient,indicadores:r,fuente:'REGISTROS',...extra});
+  if(q.includes('producto')&&/vend|venta/.test(q))return result('Todavía no puedo comparar productos: los registros no detallan un inventario por producto. Puedo mostrar las ventas totales.',{datos_suficientes:false});
+  if(/\b(quien|quienes|clientes?|deudores?)\b/.test(q)&&/deb|fiad|cobrar/.test(q)){
+    const groups=new Map();for(const o of r.pendientes.filter(o=>['VENTA','SALDO_CXC'].includes(o.tipo))){const id=o.tercero_id||null;groups.set(id,(groups.get(id)||0n)+BigInt(o.pendiente_minor));}
+    const debtors=[...groups].sort((a,b)=>a[1]===b[1]?0:a[1]>b[1]?-1:1).map(([id,n])=>({tercero_id:id,nombre:people.find(p=>p.id===id)?.nombre||'Sin cliente identificado',pendiente_minor:n.toString()}));
+    return result(debtors.length?`${debtors.slice(0,5).map(d=>`${d.nombre}: ${soles(d.pendiente_minor)}`).join('; ')}. Pendiente al ${day(to)}, descontando abonos.`:`Nadie tiene una deuda pendiente registrada al ${day(to)}.`,{deudores:debtors,datos_suficientes:debtors.length>0},true);
   }
-  if(q.includes('resumen')||q.includes('semana')){
-    const dow=new Date(end+'T00:00:00Z').getUTCDay(),start=shift(end,-((dow+6)%7)),elapsed=Math.floor((Date.parse(end)-Date.parse(start))/86400000),prev=report(shift(start,-7),shift(start,-7+elapsed)),r=report(start,end);
-    return {respuesta:`Esta semana registraste ${soles(r.ventas_minor)} en ventas, cobraste ${soles(r.cobros_ventas_minor)} y registraste ${soles(r.gastos_minor)} en gastos. Tus compras fueron ${soles(r.compras_minor)}. Te deben ${soles(r.por_cobrar_minor)} al cierre. En los mismos días de la semana anterior registraste ${soles(prev.ventas_minor)} en ventas.`,desde:start,hasta:end,indicadores:r,comparacion:{desde:prev.desde,hasta:prev.hasta,ventas_minor:prev.ventas_minor}};
+  if(/compar|mas que|menos que|evoluci|creci/.test(q)&&/vend|venta|negocio/.test(q)){
+    if(q.includes('mes pasado')&&!/\d{4}|\d{2}\//.test(q)){
+      const start=end.slice(0,7)+'-01',last=shift(start,-1),a=last.slice(0,7)+'-01',cur=report(start,end),prev=report(a,last);
+      return result(`Mes actual hasta ${end}: ventas ${soles(cur.ventas_minor)}; mes anterior completo (${a} al ${last}): ${soles(prev.ventas_minor)}. Diferencia ${soles((BigInt(cur.ventas_minor)-BigInt(prev.ventas_minor)).toString())}. El mes actual es parcial. ${a<business.inicio_historial?'No existe cobertura completa del mes anterior.':'No es una predicción.'}`,{indicadores:cur,desde:start,hasta:end,comparacion:prev,datos_suficientes:cur.primer_registro!==null&&a>=business.inicio_historial});
+    }
+    const days=Math.round((Date.parse(to)-Date.parse(from))/86400000)+1,a=shift(from,-days),b=shift(from,-1),prev=report(a,b);
+    return result(`${prefix}ventas ${soles(r.ventas_minor)}; periodo anterior de igual duración (${a} al ${b}), ${soles(prev.ventas_minor)}. Diferencia ${soles((BigInt(r.ventas_minor)-BigInt(prev.ventas_minor)).toString())}. ${a<business.inicio_historial?'No hay cobertura completa del periodo anterior.':'Son registros, no una predicción.'}`,{comparacion:prev,datos_suficientes:sufficient&&a>=business.inicio_historial});
   }
-  if(q.includes('deben'))return {respuesta:`Al ${end}, te deben ${soles(current.por_cobrar_minor)}. Es saldo de ventas y deudas anteriores al historial.`,indicadores:current};
-  if(q.includes('mercaderia'))return {respuesta:`Este mes registraste ${soles(current.compras_minor)} en compras de mercadería. Los pagos realizados se muestran aparte y no crean nuevas compras.`,indicadores:current};
-  if(q.includes('en que')&&q.includes('gast')){
-    const by=new Map();for(const o of data[0])if(o.estado==='CONFIRMADO'&&o.tipo==='GASTO_OPERATIVO'&&o.fecha_operacion>=month&&o.fecha_operacion<=end)by.set(o.categoria_id,(by.get(o.categoria_id)||0n)+BigInt(o.total_minor));
-    const rows=[...by].sort((a,b)=>a[1]===b[1]?0:a[1]>b[1]?-1:1).map(([id,n])=>({nombre:categories.find(c=>c.id===id)?.nombre||'General',monto_minor:n.toString()}));
-    return {respuesta:rows.length?`Tu mayor gasto registrado este mes es ${rows[0].nombre}: ${soles(rows[0].monto_minor)}.`:'Este mes todavía no hay gastos registrados.',categorias:rows,indicadores:current};
+  if(/por que|recom|consej|como va|como esta|resumen|balance|resultado/.test(q))return result(`${prefix}ventas ${soles(r.ventas_minor)}, gastos operativos ${soles(r.gastos_minor)} y compras ${soles(r.compras_minor)}; cobros de ventas ${soles(r.cobros_ventas_minor)} y pagos operativos ${soles(r.pagos_operativos_minor)}. Al ${to} te deben ${soles(r.por_cobrar_minor)} y debes ${soles(r.por_pagar_minor)}. Resultado simplificado ${soles(r.resultado_operativo_simplificado_minor)}: ventas menos compras y gastos; no utilidad contable ni efectivo disponible. `+(!sufficient?'No hay datos suficientes para recomendar cambios.':BigInt(r.resultado_operativo_simplificado_minor)<0n?'Compras y gastos superan las ventas registradas. Revisa categorías y periodos; no puedo determinar causas externas ni pérdidas contables.':'Revisa pendientes y completa los registros para evaluar tendencias; no puedo predecir ingresos.'));
+  if(/(en que|mayor|mas).*gast|gast.*(categoria|mas)/.test(q)){
+    const groups=new Map();for(const o of rows.filter(o=>o.tipo==='GASTO_OPERATIVO'))groups.set(o.categoria_id,(groups.get(o.categoria_id)||0n)+BigInt(o.total_minor));
+    const cats=[...groups].sort((a,b)=>a[1]===b[1]?0:a[1]>b[1]?-1:1).map(([id,n])=>({nombre:categories.find(c=>c.id===id)?.nombre||'General',monto_minor:n.toString()}));
+    return result(cats.length?`${prefix}mayor gasto operativo ${cats[0].nombre}: ${soles(cats[0].monto_minor)}. Las compras se muestran aparte.`:`${prefix}no hay gastos operativos registrados.`,{categorias:cats});
   }
-  if(q.includes('mes pasado')&&q.includes('vend')){
-    const last=shift(month,-1),previous=report(last.slice(0,7)+'-01',last);
-    return {respuesta:`Este mes (hasta ${end}) registraste ${soles(current.ventas_minor)} en ventas; el mes anterior completo, ${soles(previous.ventas_minor)}. La comparación incluye un mes actual parcial.`,indicadores:current,comparacion:{desde:previous.desde,hasta:previous.hasta,ventas_minor:previous.ventas_minor}};
-  }
-  if(q.includes('vend')||q.includes('ventas')){
-    const r=q.includes('hoy')?report(end,end):q.includes('mes')?current:null;
-    if(r)return {respuesta:`Del ${r.desde} al ${r.hasta} registraste ${soles(r.ventas_minor)} en ventas y recibiste ${soles(r.cobros_ventas_minor)} en cobros de ventas. Son cifras distintas: los cobros pueden corresponder a ventas de otro día.`,indicadores:r};
-  }
-  fail(422,'QUESTION_UNSUPPORTED','Prueba una de las preguntas sugeridas para consultar tus datos.');
+  if(/me deben|por cobrar|fiados|fiado/.test(q)&&!/debo|pagar/.test(q))return result(`${soles(r.por_cobrar_minor)} por cobrar al ${day(to)}. Ya descuenta los abonos registrados.`,{},true);
+  if(/debo|por pagar|deudas pendientes/.test(q))return result(`${soles(r.por_pagar_minor)} por pagar al ${day(to)}. Ya descuenta los pagos registrados.`,{},true);
+  if(/mercaderia|compras|compre/.test(q))return result(`${prefix}compras de mercadería ${soles(r.compras_minor)}. No son pagos ni costo contable de productos vendidos.`);
+  if(/cobr|recibi|recibido/.test(q))return result(`${prefix}cobros de ventas ${soles(r.cobros_ventas_minor)}; cobros de deudas iniciales ${soles(r.cobros_deudas_iniciales_minor)}. No crean ventas nuevas.`);
+  if(/pague|pagos|pagado/.test(q))return result(`${prefix}pagos operativos ${soles(r.pagos_operativos_minor)}; pagos de deudas iniciales ${soles(r.pagos_deudas_iniciales_minor)}. No crean gastos ni compras nuevos.`);
+  if(/movimiento|flujo|dinero.*mov/.test(q))return result(`${prefix}entradas externas ${soles(r.entradas_externas_minor)}, salidas externas ${soles(r.salidas_externas_minor)}. Excluyen transferencias entre cuentas; no representan ventas ni utilidad.`);
+  if(/gast|egresos operativos/.test(q))return result(`${prefix}gastos operativos ${soles(r.gastos_minor)} y compras de mercadería ${soles(r.compras_minor)} por separado. No se suman sus pagos.`);
+  if(/vend|ventas/.test(q))return result(`${soles(r.ventas_minor)} en ventas · ${label}.`);
+  fail(422,'QUESTION_UNSUPPORTED','No entendí qué quieres revisar de tu negocio. Prueba «mis ventas de hoy» o «quién me debe más».');
 }
-module.exports={answer};
+module.exports={answer,period};
+
+

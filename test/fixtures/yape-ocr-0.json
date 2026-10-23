@@ -1,0 +1,175 @@
+{
+  "synthetic": true,
+  "description": "Diseño de transferencia ficticia; personas e identificadores de prueba sin transacción personal.",
+  "text": "8:15\nMP\nFecha\nHora\nTransferencia exitosa\nDesde\nCAPTURA FICTICIA - PRUEBA\nMensaje\nS/\nN° de operación\nPara\nS/ 35.00\nPersona Prueba\n23/10/2026\n08:15 a. m.\nN° 00458291\nDesde tu saldo Yape\nPago de prueba\n< Compartir comprobante\nIr al inicio\n92%",
+  "lines": [
+    {
+      "text": "8:15",
+      "left": 56,
+      "top": 23,
+      "right": 113,
+      "bottom": 45,
+      "angle": 0
+    },
+    {
+      "text": "MP",
+      "left": 104,
+      "top": 834,
+      "right": 172,
+      "bottom": 870,
+      "angle": 0
+    },
+    {
+      "text": "Fecha",
+      "left": 63,
+      "top": 987,
+      "right": 143,
+      "bottom": 1011,
+      "angle": 0
+    },
+    {
+      "text": "Hora",
+      "left": 63,
+      "top": 1056,
+      "right": 125,
+      "bottom": 1079,
+      "angle": 0
+    },
+    {
+      "text": "Transferencia exitosa",
+      "left": 146,
+      "top": 542,
+      "right": 756,
+      "bottom": 589,
+      "angle": 0
+    },
+    {
+      "text": "Desde",
+      "left": 62,
+      "top": 1189,
+      "right": 145,
+      "bottom": 1215,
+      "angle": 0.75075144
+    },
+    {
+      "text": "CAPTURA FICTICIA - PRUEBA",
+      "left": 183,
+      "top": 280,
+      "right": 722,
+      "bottom": 309,
+      "angle": 0
+    },
+    {
+      "text": "Mensaje",
+      "left": 61,
+      "top": 1256,
+      "right": 172,
+      "bottom": 1288,
+      "angle": 1.2183207
+    },
+    {
+      "text": "S/",
+      "left": 440,
+      "top": 70,
+      "right": 472,
+      "bottom": 94,
+      "angle": 0
+    },
+    {
+      "text": "N° de operación",
+      "left": 62,
+      "top": 1120,
+      "right": 276,
+      "bottom": 1153,
+      "angle": 0.55757374
+    },
+    {
+      "text": "Para",
+      "left": 251,
+      "top": 806,
+      "right": 319,
+      "bottom": 831,
+      "angle": 0
+    },
+    {
+      "text": "S/ 35.00",
+      "left": 280,
+      "top": 642,
+      "right": 652,
+      "bottom": 748,
+      "angle": -0.50328046
+    },
+    {
+      "text": "Persona Prueba",
+      "left": 251,
+      "top": 854,
+      "right": 514,
+      "bottom": 892,
+      "angle": 0
+    },
+    {
+      "text": "23/10/2026",
+      "left": 460,
+      "top": 987,
+      "right": 630,
+      "bottom": 1014,
+      "angle": 0
+    },
+    {
+      "text": "08:15 a. m.",
+      "left": 459,
+      "top": 1053,
+      "right": 615,
+      "bottom": 1081,
+      "angle": 1.4298902
+    },
+    {
+      "text": "N° 00458291",
+      "left": 462,
+      "top": 1123,
+      "right": 645,
+      "bottom": 1147,
+      "angle": 0
+    },
+    {
+      "text": "Desde tu saldo Yape",
+      "left": 459,
+      "top": 1188,
+      "right": 738,
+      "bottom": 1220,
+      "angle": 0.58956474
+    },
+    {
+      "text": "Pago de prueba",
+      "left": 461,
+      "top": 1259,
+      "right": 673,
+      "bottom": 1289,
+      "angle": 0
+    },
+    {
+      "text": "< Compartir comprobante",
+      "left": 247,
+      "top": 1387,
+      "right": 662,
+      "bottom": 1423,
+      "angle": 0
+    },
+    {
+      "text": "Ir al inicio",
+      "left": 381,
+      "top": 1502,
+      "right": 521,
+      "bottom": 1527,
+      "angle": 0
+    },
+    {
+      "text": "92%",
+      "left": 821,
+      "top": 23,
+      "right": 874,
+      "bottom": 45,
+      "angle": 0
+    }
+  ]
+}

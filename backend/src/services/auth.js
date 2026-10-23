@@ -92,6 +92,23 @@ function authService(db,config) {
         return {usuario:publicUser({...user,...row})};
       });
     },
+    async changePassword(claims,input) {
+      const original=await db.read(async s=>(await requireSession(s,claims)).user);
+      if(!await verifyPassword(input.actual,original.password_hash))fail(422,'WRONG_PASSWORD','La contraseña actual no es correcta');
+      const encoded=await hashPassword(input.nueva);
+      return db.transaction(async s=>{
+        const {user}=await requireSession(s,claims,'update');
+        if(user.password_hash!==original.password_hash)fail(409,'CREDENTIALS_CHANGED','Las credenciales cambiaron; vuelve a intentarlo');
+        await s.update('usuarios',{id:user.id},{password_hash:encoded,version:nextVersion(user),actualizado_en:utc(new Date())});
+        // Keep this device's current session; revoke all other sessions, including refresh.
+        for(const device of await s.list('dispositivos',{usuario_id:user.id})) {
+          for(const session of await s.list('sesiones',{dispositivo_id:device.id})) {
+            if(session.id!==claims.sid&&!session.revocado_en)await s.update('sesiones',{id:session.id},{revocado_en:utc(new Date())});
+          }
+        }
+        return {ok:true};
+      });
+    },
     async me(claims) {
       return db.read(async s=>{
         const {user}=await requireSession(s,claims);

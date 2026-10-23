@@ -89,7 +89,13 @@ function readService(db) {
   };
   return {
     async ask(bid,actor,question){
-      return db.snapshot(async s=>{const d=await load(s,bid,actor),categories=await s.list('categorias',{negocio_id:bid});return require('./insights').answer(d.business,[d.ops,d.moves,d.apps,d.accounts,d.closures],question,categories);});
+      return db.snapshot(async s=>{const d=await load(s,bid,actor),categories=await s.list('categorias',{negocio_id:bid}),people=await s.list('terceros',{negocio_id:bid});return require('./insights').answer(d.business,[d.ops,d.moves,d.apps,d.accounts,d.closures],question,categories,people);});
+    },
+    async dailySales(bid,actor){
+      return db.snapshot(async s=>{const d=await load(s,bid,actor);return require('./daily-sales').dailySales(d.business,[d.ops,d.moves,d.apps,d.accounts,d.closures]);});
+    },
+    async questionPeriod(bid,actor,question){
+      return db.snapshot(async s=>{await requireSession(s,actor);const {business}=await membership(s,bid,actor.sub);const p=require('./insights-period');return p.period(question,p.businessToday(business));});
     },
     async snapshot(bid,actor) {
       return db.snapshot(async s=>{

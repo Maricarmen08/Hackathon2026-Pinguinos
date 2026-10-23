@@ -57,7 +57,10 @@ void main() {
                 ? {'configurado': true, 'proveedor': 'Gemini'}
                 : {'items': []});
           }))
-        ..session = {...session(), 'usuario': {'id':'v4-user'}};
+        ..session = {
+          ...session(),
+          'usuario': {'id': 'v4-user'}
+        };
       await t.pumpWidget(page(api, scale: 1.6));
       await t.pumpAndSettle();
       expect(find.textContaining('nivel gratuito'), findsNothing);
@@ -65,7 +68,8 @@ void main() {
       await visible(t, find.text('Cómo se usan mis datos'));
       await t.tap(find.text('Cómo se usan mis datos'));
       await t.pumpAndSettle();
-      await t.scrollUntilVisible(find.textContaining('Google puede usar'), 120, scrollable:find.byType(Scrollable).last);
+      await t.scrollUntilVisible(find.textContaining('Google puede usar'), 120,
+          scrollable: find.byType(Scrollable).last);
       expect(find.textContaining('Google puede usar'), findsOneWidget);
       expect(posts, 0);
       expect(t.takeException(), isNull);
@@ -92,7 +96,10 @@ void main() {
               ? {'configurado': true, 'proveedor': 'Gemini'}
               : {'items': []});
         }))
-      ..session = {...session(), 'usuario': {'id':'v4-user'}};
+      ..session = {
+        ...session(),
+        'usuario': {'id': 'v4-user'}
+      };
     await t.pumpWidget(page(api));
     await t.pumpAndSettle();
     await t.tap(find.byType(CheckboxListTile));
@@ -101,7 +108,7 @@ void main() {
     await visible(t, find.text('Interpretar'));
     await t.tap(find.text('Interpretar'));
     await t.pumpAndSettle();
-    expect(posts.length, 1);
+    expect(posts, isEmpty);
     expect(find.text('Revisar venta'), findsOneWidget);
     expect(find.text('Revisar gasto'), findsNothing);
     expect(find.text('Compré mercadería'), findsNothing);
@@ -150,7 +157,10 @@ void main() {
                         ]
                 });
         }))
-      ..session = {...session(), 'usuario': {'id':'v4-user'}};
+      ..session = {
+        ...session(),
+        'usuario': {'id': 'v4-user'}
+      };
     await t.pumpWidget(page(api));
     await t.pumpAndSettle();
     await visible(t, find.text('Descartar'));
@@ -171,7 +181,11 @@ void main() {
   testWidgets('borrador manual recuperado al reabrir; aislado por negocio',
       (t) async {
     final store = MemoryStore();
-    final api = ApiClient(store: store)..session = {...session(), 'usuario': {'id':'v4-user'}};
+    final api = ApiClient(store: store)
+      ..session = {
+        ...session(),
+        'usuario': {'id': 'v4-user'}
+      };
     Widget form(ApiClient c, Json b) => MaterialApp(
         theme: AppTheme.lightTheme,
         home: EntryForm(
@@ -181,14 +195,22 @@ void main() {
             accounts: const [],
             categories: const [],
             people: const []));
-    final first = ApiClient(store: store)..session = {...session(), 'usuario': {'id':'v4-user'}};
+    final first = ApiClient(store: store)
+      ..session = {
+        ...session(),
+        'usuario': {'id': 'v4-user'}
+      };
     await t.pumpWidget(form(first, business));
     await t.pumpAndSettle();
     await t.enterText(find.byType(TextFormField).first, 'Borrador de arroz');
     await t.pump(const Duration(milliseconds: 300));
     await t.pumpWidget(const SizedBox());
     await t.pump();
-    final second = ApiClient(store: store)..session = {...session(), 'usuario': {'id':'v4-user'}};
+    final second = ApiClient(store: store)
+      ..session = {
+        ...session(),
+        'usuario': {'id': 'v4-user'}
+      };
     await t.pumpWidget(form(second, business));
     await t.pumpAndSettle();
     expect(find.text('Borrador de arroz'), findsOneWidget);

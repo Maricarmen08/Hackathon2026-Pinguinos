@@ -1,5 +1,10 @@
 # FINKI V4 — estado y traspaso
 
+Complemento del 22/10/2026 sobre la rama actual `danny`: reconocimiento local de
+voz Android, OCR latino, reglas deterministas y respaldo Gemini con pausa de cuota.
+Véase [FINKI_HYBRID_LOCAL.md](FINKI_HYBRID_LOCAL.md) para el flujo, pruebas, límites,
+archivos y actualización del teléfono. La nota histórica siguiente se conserva.
+
 Fecha: 22/10/2026. Rama `feat/backend-v1`. Sin commits ni push. Se conservaron todos
 los cambios sin commit de Codex (V1–V4); no hubo reset, clean, checkout ni borrados.
 

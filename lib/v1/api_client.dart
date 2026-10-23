@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'local_media.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -39,6 +40,7 @@ class ApiClient extends ChangeNotifier {
   final http.Client client;
   final SessionStore store;
   final String baseUrl;
+  final Future<List<int>> Function(String) mediaReader;
   Json? session, pending;
   Future<void>? _refreshing;
   bool writing = false;
@@ -47,8 +49,13 @@ class ApiClient extends ChangeNotifier {
   String? get userId => session?['usuario']?['id'] as String?;
   List<Json> get localEntries =>
       outbox.where((e) => userId != null && e['owner'] == userId).toList();
-  ApiClient({http.Client? client, SessionStore? store, String? baseUrl})
+  ApiClient(
+      {http.Client? client,
+      SessionStore? store,
+      String? baseUrl,
+      Future<List<int>> Function(String)? mediaReader})
       : client = client ?? http.Client(),
+        mediaReader = mediaReader ?? readLocalMedia,
         store = store ?? SecureSessionStore(baseUrl ?? ApiConstants.baseUrl),
         baseUrl = baseUrl ?? ApiConstants.baseUrl;
   String newId() => const Uuid().v4();
@@ -136,20 +143,24 @@ class ApiClient extends ChangeNotifier {
   }
 
   Future<Json> request(String method, String path,
-      {Json? body, List<int>? bytes, Map<String, String>? headers}) async {
+      {Json? body,
+      List<int>? bytes,
+      Map<String, String>? headers,
+      bool useCache = true}) async {
     final token = session?['access_token'];
     try {
       final result =
           await _send(method, path, body: body, bytes: bytes, headers: headers);
       offline = false;
-      if (method == 'GET' &&
+      if (useCache &&
+          method == 'GET' &&
           userId != null &&
           !path.contains('/constancias/')) {
         await store.write('cache:$userId:$path', jsonEncode(result));
       }
       return result;
     } on ApiException catch (e) {
-      if (e.status == 0 && method == 'GET' && userId != null) {
+      if (useCache && e.status == 0 && method == 'GET' && userId != null) {
         final saved = await store.read('cache:$userId:$path');
         if (saved != null) {
           offline = true;
@@ -206,9 +217,13 @@ class ApiClient extends ChangeNotifier {
       throw const ApiException(
           409, 'PENDING', 'Hay un envío pendiente. Reinténtalo desde Inicio.');
     }
+    final commandId = type == 'CONFIRMAR_PROPUESTA_LOCAL'
+        ? (payload['entrada'] as Map)['id_local'] as String
+        : newId();
     if (offline || localEntries.isNotEmpty) {
       if (userId == null ||
           ![
+            'CONFIRMAR_PROPUESTA_LOCAL',
             'REGISTRAR_OPERACION',
             'REGISTRAR_COBRO',
             'REGISTRAR_PAGO',
@@ -226,7 +241,7 @@ class ApiClient extends ChangeNotifier {
           'owner': userId,
           'path': path,
           'body': {
-            'command_id': newId(),
+            'command_id': commandId,
             'dispositivo_id': device,
             'tipo': type,
             'payload': payload
@@ -246,7 +261,7 @@ class ApiClient extends ChangeNotifier {
     pending = {
       'path': path,
       'body': {
-        'command_id': newId(),
+        'command_id': commandId,
         'dispositivo_id': device,
         'tipo': type,
         'payload': payload
@@ -261,6 +276,7 @@ class ApiClient extends ChangeNotifier {
           userId == null ||
           pending == null ||
           ![
+            'CONFIRMAR_PROPUESTA_LOCAL',
             'REGISTRAR_OPERACION',
             'REGISTRAR_COBRO',
             'REGISTRAR_PAGO',
@@ -301,6 +317,7 @@ class ApiClient extends ChangeNotifier {
     notifyListeners();
     try {
       await store.write('pending', jsonEncode(pending));
+      await _prepareLocalEvidence(pending!);
       final result = await request('POST', pending!['path'] as String,
           body: Map<String, dynamic>.from(pending!['body'] as Map));
       await store.write('pending', null);
@@ -340,6 +357,7 @@ class ApiClient extends ChangeNotifier {
           break;
         }
         try {
+          await _prepareLocalEvidence(entry);
           await request('POST', entry['path'] as String,
               body: Map<String, dynamic>.from(entry['body'] as Map));
           final next = outbox
@@ -360,6 +378,36 @@ class ApiClient extends ChangeNotifier {
     } finally {
       syncing = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> _prepareLocalEvidence(Json entry) async {
+    final body = entry['body'] as Map;
+    if (body['tipo'] != 'CONFIRMAR_PROPUESTA_LOCAL') return;
+    final id = (body['payload'] as Map)['comprobante_id'];
+    if (id == null) return;
+    final parts = Uri.parse(entry['path'] as String).pathSegments;
+    if (parts.length < 2 || parts[0] != 'negocios' || userId == null) {
+      throw const ApiException(422, 'LOCAL_EVIDENCE_MISSING',
+          'No se encontró el negocio de la imagen.');
+    }
+    final businessId = parts[1];
+    final raw = await store.read('local-evidence:$userId:$businessId:$id');
+    if (raw == null) {
+      throw const ApiException(422, 'LOCAL_EVIDENCE_MISSING',
+          'No se encontró la imagen local. Revisa el registro antes de reenviarlo.');
+    }
+    try {
+      final metadata = jsonDecode(raw) as Map;
+      final data = await mediaReader(metadata['token'] as String);
+      final result = await request(
+          'POST', '/negocios/$businessId/ia/evidencia-local?id=$id',
+          bytes: data, headers: {'Content-Type': 'application/octet-stream'});
+      if (result['id'] != id) {
+        throw const FormatException('La imagen no coincide con el registro.');
+      }
+    } on FormatException catch (e) {
+      throw ApiException(422, 'LOCAL_EVIDENCE_MISSING', e.message);
     }
   }
 

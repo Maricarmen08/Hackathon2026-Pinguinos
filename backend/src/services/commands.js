@@ -6,6 +6,7 @@ const { requireSession,membership,utc } = require('./auth');
 const { financialService } = require('./financial');
 const {createCertificate}=require('./certificate');
 const {saveProposal,confirmProposal,discardProposal}=require('./intake');
+const {saveEvidence,confirmLocal}=require('./local-intake');
 function commandService(db) {
   const financial=financialService();
   return async function execute(bid,c,actor) {
@@ -27,6 +28,7 @@ function commandService(db) {
         counter={ultimo_seq:'0'};created=true;
       }
       context=await membership(s,bid,actor.sub,true);
+      if(c.tipo==='CONFIRMAR_PROPUESTA_LOCAL'&&c.command_id!==c.payload.entrada.id_local)fail(422,'LOCAL_ID_MISMATCH','Conserva la identidad del borrador al confirmar o reintentar.');
       const prior=await s.get('comandos_procesados',{id:c.command_id});
       if(prior) {
         if(prior.negocio_id!==bid || prior.usuario_id!==actor.sub || prior.dispositivo_id!==actor.did || prior.request_hash!==digest)fail(409,'IDEMPOTENCY_CONFLICT','command_id ya utilizado con otro contenido o actor');
@@ -34,7 +36,7 @@ function commandService(db) {
       }
       const {business,member}=context,changed=[];
       const ownerOnly=['ACTUALIZAR_NEGOCIO','CREAR_CATEGORIA','CREAR_CUENTA','REGISTRAR_MOVIMIENTO_NO_OPERATIVO','ANULAR_OPERACION','ANULAR_MOVIMIENTO','ANULAR_TRANSFERENCIA'];
-      if((ownerOnly.includes(c.tipo)||['SALDO_CXC','SALDO_CXP'].includes(c.payload.operacion?.tipo)||c.tipo==='CONFIRMAR_PROPUESTA'&&(c.payload.tipo==='REGISTRAR_TRANSFERENCIA'||['SALDO_CXC','SALDO_CXP'].includes(c.payload.datos?.operacion?.tipo))) && member.rol!=='PROPIETARIO')fail(403,'OWNER_REQUIRED','Acción reservada al propietario');
+      if((ownerOnly.includes(c.tipo)||['SALDO_CXC','SALDO_CXP'].includes(c.payload.operacion?.tipo)||['CONFIRMAR_PROPUESTA','CONFIRMAR_PROPUESTA_LOCAL'].includes(c.tipo)&&(c.payload.tipo==='REGISTRAR_TRANSFERENCIA'||['SALDO_CXC','SALDO_CXP'].includes(c.payload.datos?.operacion?.tipo))) && member.rol!=='PROPIETARIO')fail(403,'OWNER_REQUIRED','Acción reservada al propietario');
       if(c.tipo==='CREAR_NEGOCIO') {
         if(!created)fail(409,'BUSINESS_EXISTS','El negocio ya existe; usar su command_id original');
         changed.push({tabla:'negocios',registro:business});
@@ -44,6 +46,10 @@ function commandService(db) {
         changed.push({tabla:'cuentas',registro:await s.get('cuentas',{id:cashId,negocio_id:bid})});
       } else if(c.tipo==='GUARDAR_PROPUESTA_INTERNA') {
         await saveProposal(s,business,actor,c.payload,changed);
+      } else if(c.tipo==='GUARDAR_EVIDENCIA_LOCAL_INTERNA') {
+        await saveEvidence(s,business,actor,c.payload,changed);
+      } else if(c.tipo==='CONFIRMAR_PROPUESTA_LOCAL') {
+        await confirmLocal(s,business,actor,c.payload,changed,financial);
       } else if(c.tipo==='CONFIRMAR_PROPUESTA') {
         await confirmProposal(s,business,actor,c.payload,changed,financial);
       } else if(c.tipo==='DESCARTAR_PROPUESTA') {
