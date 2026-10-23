@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'local_draft.dart';
+import 'local_entry.dart';
 import 'api_client.dart';
 import 'app.dart';
 import 'money.dart';
@@ -435,6 +436,13 @@ class _EntryFormState extends State<EntryForm> {
           'datos': payload
         };
         type = 'CONFIRMAR_PROPUESTA';
+        path = '$root/comandos';
+      } else if (widget.row?['local_entry'] != null) {
+        payload = localConfirmation(
+            Map<String, dynamic>.from(widget.row!['local_entry'] as Map),
+            type,
+            payload);
+        type = 'CONFIRMAR_PROPUESTA_LOCAL';
         path = '$root/comandos';
       }
       final outcome = await widget.api.command(path, type, payload);

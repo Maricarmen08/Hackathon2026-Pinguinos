@@ -1,3 +1,5 @@
+import java.security.MessageDigest
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -47,3 +49,27 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    implementation("com.alphacephei:vosk-android:0.3.75@aar")
+    implementation("net.java.dev.jna:jna:5.18.1@aar")
+    // Used only by the isolated on-device diagnostic activity, never the UI.
+    debugImplementation("com.google.mlkit:text-recognition:16.0.1")
+}
+
+val verifyOfflineModel by tasks.registering {
+    val archive = layout.projectDirectory.file("src/main/assets/vosk-model-small-es-0.42.zip")
+    inputs.file(archive)
+    doLast {
+        val file = archive.asFile
+        require(file.isFile && file.length() == 39817833L) { "Falta el modelo offline español incluido en FINKI" }
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(65536)
+            while (true) { val n = input.read(buffer); if (n < 0) break; digest.update(buffer, 0, n) }
+        }
+        val hash = digest.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
+        require(hash == "09b239888f633ef2f0b4e09736e3d9936acfd810bc65d53fad45261762c6511f") { "Modelo offline no válido" }
+    }
+}
+tasks.named("preBuild") { dependsOn(verifyOfflineModel) }

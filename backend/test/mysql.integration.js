@@ -10,4 +10,5 @@ test('Integración REAL MySQL aislado', {skip:process.env.RUN_MYSQL_TESTS!=='1'}
   const db=new Database(config);
   try{await db.ping();}catch(e){await db.close();throw e;}
   await scenario(t,db,config);
+  await require('./account-scenarios').accountScenario(t,db,config);
 });

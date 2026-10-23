@@ -27,6 +27,7 @@ class MemorySession {
   }
   async update(t,eq,changes) {
     const rows=await this.list(t,eq);
+    if(t==='usuarios')for(const row of rows){const next={...row,...changes};if([...this.data.get(t).values()].some(r=>r.id!==row.id&&(r.telefono_normalizado===next.telefono_normalizado||(next.correo_normalizado&&r.correo_normalizado===next.correo_normalizado))))throw Object.assign(new Error('duplicate'),{code:'ER_DUP_ENTRY'});}
     for(const row of rows)this.data.get(t).set(t==='cambios_sync'?row.negocio_id+':'+row.seq:row.id||row.negocio_id,{...row,...structuredClone(changes)});
     return rows.length;
   }

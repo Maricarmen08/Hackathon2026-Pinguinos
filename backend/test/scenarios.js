@@ -29,7 +29,7 @@ async function scenario(t,db,config,{faultInjection=false}={}) {
   });
   const token=()=>alice.body.access_token,bid=randomUUID(),date=today(),start=date.slice(0,7)+'-01',path='/negocios/'+bid;
   const envelope=(tipo,payload,id=randomUUID())=>({command_id:id,dispositivo_id:alice.body.dispositivo_id,tipo,payload});
-  const cmd=async(tipo,payload,id)=>request('POST',path+'/comandos',envelope(tipo,payload,id),token());
+  const cmd=async(tipo,payload,id)=>request('POST',path+'/comandos',envelope(tipo,payload,id??(tipo==='CONFIRMAR_PROPUESTA_LOCAL'?payload.entrada.id_local:undefined)),token());
   const ids={saleCat:randomUUID(),purchaseCat:randomUUID(),expenseCat:randomUUID(),cash:randomUUID(),wallet:randomUUID(),client:randomUUID(),provider:randomUUID(),credit:randomUUID(),purchase:randomUUID()};
   await t.test('negocio propio, acceso ajeno y contratos estrictos',async()=>{
     const created=await request('POST','/negocios',envelope('CREAR_NEGOCIO',{id:bid,nombre:'Negocio de ensayo '+suffix,rubro:'Pruebas',inicio_historial:start,ciudad:null}),token());assert.equal(created.status,201,JSON.stringify(created.body));
@@ -99,6 +99,7 @@ async function scenario(t,db,config,{faultInjection=false}={}) {
     assert.equal((await request('POST','/negocios',asBob('CREAR_NEGOCIO',{id:otherBusiness,nombre:'Negocio B ensayo',rubro:'Pruebas',inicio_historial:start}),bob.body.access_token)).status,201);
     assert.equal((await request('POST','/negocios/'+otherBusiness+'/comandos',asBob('CREAR_CUENTA',{id:otherAccount,nombre:'Caja ajena',tipo:'EFECTIVO',fecha_apertura:start}),bob.body.access_token)).status,201);
     assert.equal((await request('GET','/negocios/'+otherBusiness,undefined,token())).status,403);
+    assert.equal((await request('POST','/negocios/'+otherBusiness+'/consultas',{pregunta:'¿Quién me debe más?'},token())).status,403);
     await db.transaction(async s=>{
       // Fixture aislado: no existe API de invitación en V1.
       await s.insert('membresias',{id:randomUUID(),negocio_id:bid,usuario_id:bob.body.usuario.id,rol:'LECTOR',estado:'ACTIVA',creado_por:alice.body.usuario.id});
@@ -168,6 +169,33 @@ async function scenario(t,db,config,{faultInjection=false}={}) {
     }
     assert.equal((await request('POST',path+'/consultas',{pregunta:'DROP TABLE usuarios'},token())).status,422);
     assert.equal((await request('POST',path+'/consultas',{pregunta:'ventas hoy'})).status,401);
+    assert.equal((await request('POST',path+'/consultas',{pregunta:'¿Quién me debe más?'},bob.body.access_token)).status,200); // LECTOR autorizado para consultar.
+    for(const pregunta of ['Dime mis ventas de esta semana','¿Quién me debe más?','¿Cuánto debo pagar?','¿Cómo va mi negocio?','¿Por qué gasto más de lo que vendo?','¿Cuánto pagué hoy?']){
+      const r=await request('POST',path+'/consultas',{pregunta},token());assert.equal(r.status,200,JSON.stringify(r.body));assert.equal(r.body.indicadores.negocio_id,bid);assert.equal(r.body.fuente,'REGISTROS');
+    }
+  });
+  await t.test('periodos diarios y mensuales con ventas distintas en negocio aislado',async()=>{
+    const temporalBid=randomUUID(),customer=randomUUID(),category=randomUUID(),p='/negocios/'+temporalBid;
+    const shiftDate=(n)=>new Date(Date.parse(date+'T00:00:00Z')+n*86400000).toISOString().slice(0,10);
+    const command=(tipo,payload)=>request('POST',p+'/comandos',envelope(tipo,payload),token());
+    assert.equal((await request('POST','/negocios',envelope('CREAR_NEGOCIO',{id:temporalBid,nombre:'Ensayo temporal aislado',rubro:'Pruebas',inicio_historial:shiftDate(-40)}),token())).status,201);
+    assert.equal((await command('CREAR_TERCERO',{id:customer,nombre:'Cliente temporal'})).status,201);
+    assert.equal((await command('CREAR_CATEGORIA',{id:category,nombre:'Ventas temporales',tipo:'VENTA'})).status,201);
+    for(const [offset,total] of [[0,'10000'],[-1,'20000'],[-8,'30000']]){
+      const result=await command('REGISTRAR_OPERACION',{operacion:{...op(randomUUID(),'VENTA',category,total,'CREDITO',customer),fecha_operacion:shiftDate(offset)}});assert.equal(result.status,201,JSON.stringify(result.body));
+    }
+    for(const pregunta of ['Mis ventas del día','mis ventas del dia','¿Cuánto vendí hoy?','Ventas esta mañana']){
+      const r=await request('POST',p+'/consultas',{pregunta},token());assert.equal(r.status,200,JSON.stringify(r.body));assert.equal(r.body.desde,date);assert.equal(r.body.hasta,date);assert.equal(r.body.indicadores.ventas_minor,'10000');assert.equal(r.body.indicadores.cobros_ventas_minor,'0');
+    }
+    const yesterday=await request('POST',p+'/consultas',{pregunta:'Ventas de ayer'},token());assert.equal(yesterday.body.indicadores.ventas_minor,'20000');
+    const daily=await request('GET',p+'/ventas/hoy',undefined,token());assert.equal(daily.status,200);assert.equal(daily.body.negocio_id,temporalBid);assert.equal(daily.body.ventas_minor,'10000');assert.equal(daily.body.desde,date);assert.equal(daily.body.hasta,date);
+    const reportToday=await request('GET',p+'/indicadores?desde='+date+'&hasta='+date,undefined,token());assert.equal(reportToday.body.ventas_minor,daily.body.ventas_minor);
+    assert.equal((await request('GET',p+'/ventas/hoy')).status,401);
+    assert.equal((await request('GET',p+'/ventas/hoy',undefined,bob.body.access_token)).status,403);
+    const monthly=await request('POST',p+'/consultas',{pregunta:'Ventas de este mes'},token());
+    const expected=[[0,10000n],[-1,20000n],[-8,30000n]].filter(([offset])=>shiftDate(offset)>=date.slice(0,7)+'-01').reduce((n,[,amount])=>n+amount,0n);
+    assert.equal(monthly.body.indicadores.ventas_minor,expected.toString());
+    assert.equal((await request('POST',p+'/consultas',{pregunta:'ventas hoy'},bob.body.access_token)).status,403);
   });
   await t.test('propuesta requiere confirmación, abona sin nueva venta y no se confirma dos veces',async()=>{
     const operationId=randomUUID();assert.equal((await cmd('REGISTRAR_OPERACION',{operacion:op(operationId,'VENTA',null,'10000','CREDITO',ids.client)})).status,201);
@@ -188,7 +216,7 @@ async function scenario(t,db,config,{faultInjection=false}={}) {
     const fs=require('node:fs'),pathModule=require('node:path');
     const bytes=fs.readFileSync(pathModule.join(__dirname,'../../assets/branding/finki_robot.png'));
     let calls=0;const actor=require('../src/security').tokens(config).verify(token(),'access');
-    const provider=new (require('../src/services/gemini-provider').GeminiProvider)({AI_ENABLED:true,GEMINI_API_KEY:'mock-not-a-real-key'},async()=>{calls++;return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({intencion:'DESCONOCIDO',monto_minor:'10000',concepto:'Ensayo de comprobante',fecha:date,persona:null,referencia:'fixture-'+randomUUID(),medio:'YAPE',fiado:false,es_pago:true,pregunta:'¿Qué representa?',texto_visible:'Fixture sin proveedor real'})}]}}]}));},{reserve(){}});
+    const provider=new (require('../src/services/gemini-provider').GeminiProvider)({AI_ENABLED:true,GEMINI_API_KEY:'mock-not-a-real-key'},async()=>{calls++;return new Response(JSON.stringify({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({intencion:'DESCONOCIDO',monto_minor:'10000',concepto:'Ensayo de comprobante',fecha:date,persona:null,referencia:'fixture-'+randomUUID(),medio:'YAPE',fiado:false,es_pago:true,pregunta:'¿Qué representa?',texto_visible:'Fixture sin proveedor real'})}]}}]}));},{reserve(){}},{check(){},block(){},success(){},availability(){return {disponible:true};}});
     const intake=require('../src/services/intake').intakeService(db,require('../src/services/commands').commandService(db),provider),id=randomUUID();
     const indicatorsBefore=(await request('GET',path+'/indicadores',undefined,token())).body;
     const first=await intake(bid,actor,{bytes,id,consent:true});assert.equal(first.estado,'REQUIERE_REVISION');
@@ -228,6 +256,37 @@ async function scenario(t,db,config,{faultInjection=false}={}) {
     const after=(await request('GET',path+'/indicadores',undefined,token())).body;
     assert.equal(after.ventas_minor,before.ventas_minor);assert.equal(after.cobros_ventas_minor,before.cobros_ventas_minor);
     const events=await db.read(s=>s.list('auditoria',{negocio_id:bid,command_id:commandId}));assert.equal(events.length,1);assert.equal(events[0].accion,'DESCARTAR_PROPUESTA');
+  });
+  await t.test('propuestas locales: fiado, abono, imagen original, aislamiento y reintento sin duplicados',async()=>{
+    const proposed={intencion:'VENTA',monto_minor:'10000',concepto:'Ensayo local',fecha:date,persona:'Cliente',referencia:null,medio:null,fiado:true,es_pago:false,pregunta:null,texto_visible:'Le fié cien soles'};
+    const wrapLocal=(tipo,datos,extra={})=>({entrada:{id_local:randomUUID(),tipo:'VOZ',texto:'Le fié cien soles',propuesta:proposed},comprobante_id:null,tipo,datos,...extra});
+    const operationId=randomUUID(),id=randomUUID(),payload=wrapLocal('REGISTRAR_OPERACION',{operacion:op(operationId,'VENTA',null,'10000','CREDITO',ids.client)});
+    payload.entrada.id_local=id;
+    assert.equal((await request('POST',path+'/comandos',{...envelope('CONFIRMAR_PROPUESTA_LOCAL',payload),dispositivo_id:bob.body.dispositivo_id},bob.body.access_token)).status,403);
+    const before=(await request('GET',path+'/indicadores',undefined,token())).body;
+    const created=await cmd('CONFIRMAR_PROPUESTA_LOCAL',payload,id);assert.equal(created.status,201,JSON.stringify(created.body));
+    assert.equal((await cmd('CONFIRMAR_PROPUESTA_LOCAL',payload,id)).body.replayed,true);
+    const operation=(await request('GET',path+'/operaciones/'+operationId,undefined,token())).body;assert.equal(operation.origen,'VOZ');assert.ok(operation.extraccion_id);assert.equal(operation.pendiente_minor,'10000');
+    const extraction=await db.read(s=>s.get('extracciones',{id:operation.extraccion_id,negocio_id:bid}));assert.equal(extraction.proveedor,'LOCAL');assert.equal(extraction.estado,'CONFIRMADA');
+    const pay=wrapLocal('REGISTRAR_COBRO',{movimiento:mov('4000'),aplicaciones:[{id:randomUUID(),operacion_id:operationId,monto_minor:'4000'}]});
+    const paid=await cmd('CONFIRMAR_PROPUESTA_LOCAL',pay);assert.equal(paid.status,201,JSON.stringify(paid.body));assert.equal((await request('GET',path+'/operaciones/'+operationId,undefined,token())).body.pendiente_minor,'6000');
+    const after=(await request('GET',path+'/indicadores',undefined,token())).body;assert.equal(BigInt(after.ventas_minor)-BigInt(before.ventas_minor),10000n);
+    const bytes=Buffer.concat([require('node:fs').readFileSync(require('node:path').join(__dirname,'../../assets/branding/finki_robot.png')),Buffer.from(randomUUID())]),imageId=randomUUID();
+    const upload=async(image,data=bytes,auth=token())=>{const r=await fetch(base+path+'/ia/evidencia-local?id='+image,{method:'POST',headers:{Authorization:'Bearer '+auth,'Content-Type':'application/octet-stream'},body:data});return {status:r.status,body:await r.json()};};
+    assert.equal((await upload(imageId,bytes,bob.body.access_token)).status,403);
+    assert.equal((await upload(imageId)).status,201);assert.equal((await upload(imageId)).body.id,imageId);
+    assert.equal((await upload(randomUUID())).status,409);
+    const localImage=wrapLocal('REGISTRAR_COBRO',{movimiento:mov('2000'),aplicaciones:[{id:randomUUID(),operacion_id:operationId,monto_minor:'2000'}]}, {comprobante_id:imageId,entrada:{id_local:randomUUID(),tipo:'IMAGEN',texto:'Yape de ensayo por 20 soles',propuesta:{...proposed,intencion:'DESCONOCIDO',monto_minor:'2000',medio:'YAPE',es_pago:true,referencia:'local-'+randomUUID()}}});
+    const imageCommand=localImage.entrada.id_local;const imageResult=await cmd('CONFIRMAR_PROPUESTA_LOCAL',localImage,imageCommand);assert.equal(imageResult.status,201,JSON.stringify(imageResult.body));
+    assert.equal((await cmd('CONFIRMAR_PROPUESTA_LOCAL',localImage,imageCommand)).body.replayed,true);
+    assert.equal((await cmd('CONFIRMAR_PROPUESTA_LOCAL',{...localImage,entrada:{...localImage.entrada,id_local:randomUUID()}})).status,409);
+    assert.equal((await cmd('CONFIRMAR_PROPUESTA_LOCAL',payload,randomUUID())).body.error.code,'LOCAL_ID_MISMATCH');
+    assert.equal((await cmd('CONFIRMAR_PROPUESTA_LOCAL',{...payload,datos:{...payload.datos,operacion:{...payload.datos.operacion,id:randomUUID()}}})).body.error.code,'IDEMPOTENCY_CONFLICT');
+    assert.equal((await request('GET',path+'/operaciones/'+operationId,undefined,token())).body.pendiente_minor,'4000');
+    const evidence=await db.read(s=>s.get('comprobantes',{id:imageId,negocio_id:bid}));assert.equal(evidence.sha256,require('node:crypto').createHash('sha256').update(bytes).digest('hex'));
+    const original=require('node:fs').readFileSync(require('node:path').resolve(process.env.FINKI_PRIVATE_DIR||require('node:path').join(__dirname,'../private'),evidence.storage_key));assert.ok(original.equals(bytes));
+    const invalid=wrapLocal('REGISTRAR_OPERACION',{operacion:op(randomUUID(),'VENTA',null,'100','CONTADO',null),pagos_iniciales:[{...mov('100'),cuenta_id:randomUUID(),aplicacion_id:randomUUID()}]});
+    const count=(await db.read(s=>s.list('extracciones',{negocio_id:bid}))).length;assert.equal((await cmd('CONFIRMAR_PROPUESTA_LOCAL',invalid)).status,404);assert.equal((await db.read(s=>s.list('extracciones',{negocio_id:bid}))).length,count);
   });
   await t.test('IA desactivada bloquea proveedor y exige consentimiento sin cargos',async()=>{
     assert.equal((await request('GET',path+'/ia/estado',undefined,token())).body.configurado,false);

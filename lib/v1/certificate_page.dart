@@ -24,10 +24,31 @@ class _CertificatePageState extends State<CertificatePage> {
   String? reportId;
   List<Json> recent = [];
   bool busy = false;
+  String selectedPeriod = 'Hoy';
+  Future<void> selectPeriod(String value) async {
+    if (busy) return;
+    if (value == 'Rango personalizado') {
+      await choosePeriod();
+      return;
+    }
+    final today = limaToday(), d = DateTime.parse(limaToday());
+    from = value == 'Hoy'
+        ? today
+        : value == 'Últimos 7 días'
+            ? d
+                .subtract(const Duration(days: 6))
+                .toIso8601String()
+                .substring(0, 10)
+            : '${today.substring(0, 7)}-01';
+    to = today;
+    selectedPeriod = value;
+    await preview();
+  }
+
   @override
   void initState() {
     super.initState();
-    from = widget.business['inicio_historial'] as String;
+    from = limaToday();
     to = limaToday();
     preview();
     loadRecent();
@@ -55,7 +76,8 @@ class _CertificatePageState extends State<CertificatePage> {
   Future<void> choosePeriod() async {
     final dates = await showDateRangePicker(
         context: context,
-        firstDate: DateTime.parse(widget.business['inicio_historial']),
+        firstDate:
+            DateTime.parse(limaToday()).subtract(const Duration(days: 3650)),
         lastDate: DateTime.parse(limaToday()),
         initialDateRange:
             DateTimeRange(start: DateTime.parse(from), end: DateTime.parse(to)),
@@ -63,6 +85,7 @@ class _CertificatePageState extends State<CertificatePage> {
     if (dates == null || !mounted) return;
     from = dates.start.toIso8601String().substring(0, 10);
     to = dates.end.toIso8601String().substring(0, 10);
+    selectedPeriod = 'Rango personalizado';
     await preview();
   }
 
@@ -119,6 +142,7 @@ class _CertificatePageState extends State<CertificatePage> {
           summary = Map<String, dynamic>.from(data['indicadores'] as Map);
           from = summary!['desde'] as String;
           to = summary!['hasta'] as String;
+          selectedPeriod = 'Rango personalizado';
         });
       }
     } catch (e) {
@@ -152,15 +176,34 @@ class _CertificatePageState extends State<CertificatePage> {
         const Text(
             'Un resumen de lo que registraste en Finki para presentar la actividad de tu negocio.'),
         const SizedBox(height: 16),
+        Text('Periodo de la constancia',
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 4, children: [
+          for (final value in [
+            'Hoy',
+            'Últimos 7 días',
+            'Este mes',
+            'Rango personalizado'
+          ])
+            ChoiceChip(
+                label: Text(value),
+                selected: selectedPeriod == value,
+                onSelected: busy ? null : (_) => selectPeriod(value)),
+        ]),
+        const SizedBox(height: 8),
         OutlinedButton.icon(
             onPressed: busy ? null : choosePeriod,
             icon: const Icon(Icons.date_range),
-            label: Text(periodEs(from, to, today: limaToday()))),
+            label: Text(periodEs(from, to, today: ''))),
         if (busy)
           const Padding(
               padding: EdgeInsets.all(24),
               child: Center(child: CircularProgressIndicator())),
         if (summary != null) ...[
+          const FinkiSection('Vista previa',
+              subtitle:
+                  'El PDF usará este periodo y los registros confirmados.'),
           Card(
             child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -175,13 +218,22 @@ class _CertificatePageState extends State<CertificatePage> {
                     'Resultado simplificado':
                         'resultado_operativo_simplificado_minor'
                   }.entries)
-                    ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 4),
-                        title: Text(entry.key),
-                        subtitle: Text(soles(summary![entry.value]),
-                            style: const TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.w700))),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: Text(entry.key)),
+                            const SizedBox(width: 12),
+                            Flexible(
+                                child: Text(soles(summary![entry.value]),
+                                    textAlign: TextAlign.right,
+                                    style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700))),
+                          ]),
+                    ),
                 ])),
           ),
           const SizedBox(height: 12),
@@ -228,11 +280,12 @@ class _CertificatePageState extends State<CertificatePage> {
           OutlinedButton(onPressed: preview, child: const Text('Reintentar')),
         if (recent.isNotEmpty) const FinkiSection('Constancias anteriores'),
         for (final row in recent)
-          ListTile(
-              title: Text(
-                  periodEs(row['desde'], row['hasta'], today: limaToday())),
-              subtitle: Text(timestampEs(row['generado_en'])),
-              trailing: const Icon(Icons.picture_as_pdf_outlined),
-              onTap: busy ? null : () => recover(row)),
+          Card(
+              child: ListTile(
+                  leading: const Icon(Icons.description_outlined),
+                  title: Text(periodEs(row['desde'], row['hasta'], today: '')),
+                  subtitle: Text(timestampEs(row['generado_en'])),
+                  trailing: const Icon(Icons.picture_as_pdf_outlined),
+                  onTap: busy ? null : () => recover(row))),
       ])));
 }

@@ -18,6 +18,10 @@ dependencies:
   printing: 5.14.2
   record: 6.1.2
   image_picker: 1.2.0
+  # Java-based plugin compatible with the project's existing AGP/Kotlin flags.
+  google_mlkit_text_recognition: 0.15.1
+  crypto: 3.0.7
+  path_provider: 2.1.6
 
 dev_dependencies:
   flutter_test:

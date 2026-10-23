@@ -1,0 +1,9 @@
+Vosk offline speech recognition: https://github.com/alphacep/vosk-api
+Vosk Android 0.3.75, Apache License 2.0.
+Model: vosk-model-small-es-0.42, Apache License 2.0.
+Copyright 2022-2050 AC Technologies LLC (model README as distributed).
+Model source: https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip
+SHA-256: 09b239888f633ef2f0b4e09736e3d9936acfd810bc65d53fad45261762c6511f
+Compressed bytes: 39817833. Expanded model bytes: 60286598.
+The original archive is unmodified. See VOSK_LICENSE.txt for its license.
+JNA 5.18.1 is used under its Apache 2.0 license option.

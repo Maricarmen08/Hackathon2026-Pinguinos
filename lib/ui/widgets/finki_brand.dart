@@ -3,7 +3,7 @@ import '../../core/theme/app_theme.dart';
 
 enum FinkiMascotVariant { welcome, compact, empty, confirmation }
 
-/// Full artwork for illustrations; the prepared face is reserved for headers.
+/// Use complete existing artwork in headers as well as illustrations.
 class FinkiMascot extends StatelessWidget {
   final FinkiMascotVariant variant;
   final double size;
@@ -12,13 +12,9 @@ class FinkiMascot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final compact = variant == FinkiMascotVariant.compact;
-    final illustration = Image.asset(
-        compact
-            ? 'assets/branding/finki_robot.png'
-            : 'assets/branding/finki_logo_display.png',
+    final illustration = Image.asset('assets/branding/finki_logo_display.png',
         fit: BoxFit.contain,
-        semanticLabel:
-            compact ? 'Rostro de Finki' : 'Finki completo, tu asistente',
+        semanticLabel: 'Finki completo, tu asistente',
         filterQuality: FilterQuality.high);
     return SizedBox(
         width: compact ? size : size * 4 / 3,

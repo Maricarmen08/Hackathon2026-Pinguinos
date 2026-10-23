@@ -1,10 +1,16 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'daily_sales.dart';
 import 'api_client.dart';
 import 'money.dart';
 import 'presentation.dart';
 import 'forms.dart';
 import 'certificate_page.dart';
 import 'intake_page.dart';
+import 'intake_widgets.dart' show showIntakePrivacy;
+import 'profile_edit_page.dart';
+import 'profile_photo_page.dart';
+import 'account_security_page.dart';
 import 'transfer_page.dart';
 import 'insights_page.dart';
 import '../core/theme/app_theme.dart';
@@ -193,8 +199,9 @@ class _AuthPageState extends State<AuthPage> {
                   TextFormField(
                       controller: user,
                       decoration: InputDecoration(
-                          labelText:
-                              register ? 'Celular peruano' : 'Celular o correo',
+                          labelText: register
+                              ? 'Celular peruano'
+                              : 'Teléfono o correo electrónico',
                           prefixIcon:
                               const Icon(Icons.alternate_email_rounded)),
                       keyboardType: register
@@ -375,6 +382,9 @@ class _BusinessHomeState extends State<BusinessHome>
       history = [],
       pending = [];
   Json? business, report, profile;
+  DailySales? dailySales;
+  bool dailyCached = false;
+  Timer? dailyTimer;
   bool loading = true;
   Object? error;
   int tab = 0;
@@ -394,6 +404,7 @@ class _BusinessHomeState extends State<BusinessHome>
 
   @override
   void dispose() {
+    dailyTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -408,10 +419,12 @@ class _BusinessHomeState extends State<BusinessHome>
   }
 
   Future<void> load() async {
+    dailyTimer?.cancel();
     if (mounted) {
       setState(() {
         loading = true;
         error = null;
+        dailySales = null;
       });
     }
     try {
@@ -435,6 +448,7 @@ class _BusinessHomeState extends State<BusinessHome>
         accounts = (report!['cuentas'] as List)
             .map((x) => Map<String, dynamic>.from(x as Map))
             .toList();
+        await loadDailySales();
         categories = await api.all('$path/categorias');
         people = await api.all('$path/terceros');
         await loadList();
@@ -444,6 +458,37 @@ class _BusinessHomeState extends State<BusinessHome>
       error = e;
     }
     if (mounted) setState(() => loading = false);
+  }
+
+  Future<void> loadDailySales() async {
+    dailyTimer?.cancel();
+    final id = business?['id'] as String?;
+    if (id == null) return;
+    DailySales? snapshot;
+    var cached = false;
+    try {
+      final data = await api.request('GET', '/negocios/$id/ventas/hoy');
+      cached = api.offline;
+      snapshot = DailySales.parse(data, id);
+    } catch (_) {
+      // Other dashboard sections may still be available. Never substitute the
+      // all-history report, an incomplete replica or an invented zero here.
+    }
+    if (!mounted || business?['id'] != id) return;
+    setState(() {
+      dailySales = snapshot;
+      dailyCached = cached;
+    });
+    if (snapshot != null && snapshot.isToday(DateTime.now())) {
+      dailyTimer = Timer(
+          snapshot.end.difference(DateTime.now().toUtc()) +
+              const Duration(milliseconds: 50), () {
+        if (mounted) {
+          setState(() {});
+          loadDailySales();
+        }
+      });
+    }
   }
 
   Future<void> loadList({bool append = false}) async {
@@ -567,20 +612,23 @@ class _BusinessHomeState extends State<BusinessHome>
                 Icon(Icons.storefront_outlined, color: Colors.white, size: 20),
                 SizedBox(width: 8),
                 Expanded(
-                    child: Text('Ventas registradas',
+                    child: Text('Ventas de hoy',
                         style: TextStyle(color: Colors.white)))
               ]),
               const SizedBox(height: 8),
               Text(
-                  periodEs(report?['desde'] ?? business?['inicio_historial'],
-                      report?['hasta'] ?? limaToday(),
-                      today: limaToday()),
+                  dailySales == null
+                      ? 'Fecha del negocio pendiente de consulta'
+                      : '${dailySales!.isToday(DateTime.now()) ? '' : 'Último dato: '}${dateEs(dailySales!.day)}',
                   style: const TextStyle(color: AppTheme.onBrandMuted)),
               const SizedBox(height: 12),
               FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
-                  child: Text(soles(report?['ventas_minor']),
+                  child: Text(
+                      dailySales?.isToday(DateTime.now()) == true
+                          ? soles(dailySales!.amount)
+                          : 'Sin datos de hoy',
                       style: const TextStyle(
                           fontSize: 34,
                           fontWeight: FontWeight.w800,
@@ -588,7 +636,59 @@ class _BusinessHomeState extends State<BusinessHome>
               const SizedBox(height: 8),
               const Text('Incluye ventas al contado y fiadas.',
                   style: TextStyle(color: AppTheme.onBrandMuted)),
+              if (dailyCached ||
+                  dailySales == null ||
+                  !dailySales!.isToday(DateTime.now())) ...[
+                const SizedBox(height: 8),
+                Text(
+                    dailySales == null
+                        ? 'Conecta para consultar las ventas de hoy.'
+                        : !dailySales!.isToday(DateTime.now())
+                            ? 'Sin datos actuales. Último importe guardado: ${soles(dailySales!.amount)}; puede estar desactualizado.'
+                            : 'Sin conexión · Datos guardados; pueden estar desactualizados.',
+                    style: const TextStyle(
+                        color: AppTheme.onBrandMuted, fontSize: 12)),
+              ],
             ])),
+        const SizedBox(height: 20),
+        Card(
+            child: Column(children: [
+          if (writer)
+            ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                leading: const Icon(Icons.mic_none_rounded,
+                    color: AppTheme.brandBlue, size: 30),
+                title: const Text('Hablar con Finki',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('Registra con tu voz, texto o una foto'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  final saved = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                          builder: (_) => IntakePage(
+                              api: api,
+                              business: business!,
+                              accounts: accounts,
+                              categories: categories,
+                              people: people)));
+                  if (saved == true && mounted) await load();
+                }),
+          if (writer) const Divider(height: 1, indent: 20, endIndent: 20),
+          ListTile(
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              leading: const Icon(Icons.picture_as_pdf_outlined,
+                  color: AppTheme.brandBlue, size: 30),
+              title: const Text('Mi constancia',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: const Text('Prepara un resumen de tu negocio en PDF'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) =>
+                      CertificatePage(api: api, business: business!)))),
+        ])),
+        const SizedBox(height: 12),
         const FinkiSection('¿Qué vas a registrar?'),
         if (writer)
           LayoutBuilder(
@@ -644,62 +744,37 @@ class _BusinessHomeState extends State<BusinessHome>
             label: '${a['nombre']} · ${a['tipo']}',
             value: soles(a['saldo_registrado_minor']),
             icon: Icons.account_balance_wallet_outlined)),
-        if (owner)
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            TextButton.icon(
-                onPressed: () => openForm('account'),
-                icon: const Icon(Icons.add),
-                label: const Text('Cuenta')),
-            TextButton.icon(
-                onPressed: () => openForm('category'),
-                icon: const Icon(Icons.category_outlined),
-                label: const Text('Categoría')),
-          ]),
         if (writer)
-          Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                  onPressed: () => openForm('person'),
-                  icon: const Icon(Icons.person_add_alt),
-                  label: const Text('Cliente o proveedor'))),
-        Card(
-            child: Column(children: [
-          if (writer)
-            ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                leading: const Icon(Icons.mic_none_rounded,
-                    color: AppTheme.brandBlue, size: 30),
-                title: const Text('Hablar con Finki',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: const Text('Registra con tu voz, texto o una foto'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () async {
-                  final saved = await Navigator.of(context).push<bool>(
-                      MaterialPageRoute(
-                          builder: (_) => IntakePage(
-                              api: api,
-                              business: business!,
-                              accounts: accounts,
-                              categories: categories,
-                              people: people)));
-                  if (saved == true && mounted) await load();
-                }),
-          if (writer) const Divider(height: 1, indent: 20, endIndent: 20),
-          ListTile(
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              leading: const Icon(Icons.picture_as_pdf_outlined,
-                  color: AppTheme.brandBlue, size: 30),
-              title: const Text('Mi constancia',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
-              subtitle: const Text('Prepara un resumen de tu negocio en PDF'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) =>
-                      CertificatePage(api: api, business: business!)))),
-        ])),
-        const SizedBox(height: 12),
+          const FinkiSection('Herramientas del negocio',
+              subtitle: 'Organiza tus cuentas, categorías y contactos.'),
+        if (writer)
+          LayoutBuilder(
+              builder: (context, constraints) =>
+                  Wrap(spacing: 12, runSpacing: 12, children: [
+                    if (owner)
+                      SizedBox(
+                          width: (constraints.maxWidth - 12) / 2,
+                          child: FinkiButton(
+                              onPressed: () => openForm('account'),
+                              kind: FinkiButtonKind.outlined,
+                              icon: Icons.add,
+                              label: 'Cuenta')),
+                    if (owner)
+                      SizedBox(
+                          width: (constraints.maxWidth - 12) / 2,
+                          child: FinkiButton(
+                              onPressed: () => openForm('category'),
+                              kind: FinkiButtonKind.outlined,
+                              icon: Icons.category_outlined,
+                              label: 'Categoría')),
+                    SizedBox(
+                        width: constraints.maxWidth,
+                        child: FinkiButton(
+                            onPressed: () => openForm('person'),
+                            kind: FinkiButtonKind.outlined,
+                            icon: Icons.person_add_alt,
+                            label: 'Cliente o proveedor')),
+                  ])),
         FinkiSection('Actividad reciente',
             action: TextButton(
                 onPressed: () => selectTab(1), child: const Text('Ver todo'))),
@@ -804,13 +879,23 @@ class _BusinessHomeState extends State<BusinessHome>
   Widget get reportsPage =>
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text('Tus reportes', style: Theme.of(context).textTheme.headlineSmall),
-        OutlinedButton.icon(
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+        const SizedBox(height: 16),
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: ListTile(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: const Icon(Icons.chat_bubble_outline),
+            title: const Text('Pregúntale a Finki'),
+            subtitle:
+                const Text('Consulta tus ventas, gastos, fiados y movimientos'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => InsightsPage(
                     api: api, businessId: business!['id'] as String))),
-            icon: const Icon(Icons.chat_bubble_outline),
-            label: const Text('Preguntar por mi negocio')),
-        const SizedBox(height: 8),
+          ),
+        ),
+        const SizedBox(height: 16),
         Text(
             periodEs(report?['desde'] ?? business?['inicio_historial'],
                 report?['hasta'] ?? limaToday(),
@@ -891,56 +976,195 @@ class _BusinessHomeState extends State<BusinessHome>
             ])));
   }
 
+  Future<void> accountPage(Widget page, String success) async {
+    final saved = await Navigator.of(context)
+        .push<bool>(MaterialPageRoute(builder: (_) => page));
+    if (saved == true && mounted) {
+      await load();
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(success)));
+      }
+    }
+  }
+
   Widget get profilePage =>
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text('Tu perfil', style: Theme.of(context).textTheme.headlineSmall),
-        const SizedBox(height: 24),
-        const Align(
-            alignment: Alignment.centerLeft,
-            child: CircleAvatar(
-                radius: 28,
-                backgroundColor: AppTheme.paleBlue,
-                child: Icon(Icons.person_outline, size: 30))),
-        const SizedBox(height: 16),
-        Text(profile?['nombre'] ?? '',
-            style: Theme.of(context).textTheme.titleLarge),
-        if (profile?['telefono'] != null) Text(profile!['telefono'] as String),
-        if (profile?['correo'] != null) Text(profile!['correo'] as String),
-        const FinkiSection('Tus negocios',
+        const SizedBox(height: 20),
+        Card(
+            child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(children: [
+                  ProfileAvatar(api: api),
+                  const SizedBox(width: 16),
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        Text(profile?['nombre'] ?? '',
+                            style: Theme.of(context).textTheme.titleLarge),
+                        if (profile?['telefono'] != null)
+                          Text(profile!['telefono'] as String),
+                        if (profile?['correo'] != null)
+                          Text(profile!['correo'] as String),
+                      ])),
+                ]))),
+        const FinkiSection('Información personal'),
+        Card(
+            child: Column(children: [
+          ListTile(
+            leading: const Icon(Icons.manage_accounts_outlined),
+            title: const Text('Editar mis datos'),
+            subtitle: Text(api.offline
+                ? 'Disponible al conectarte'
+                : 'Nombre, teléfono y correo'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: profile == null || api.offline || api.writing
+                ? null
+                : () async {
+                    final saved = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                ProfileEditPage(api: api, profile: profile!)));
+                    if (saved == true && mounted) {
+                      await load();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content:
+                                    Text('Datos personales actualizados')));
+                      }
+                    }
+                  },
+          ),
+          const Divider(height: 1, indent: 20, endIndent: 20),
+          ListTile(
+            leading: const Icon(Icons.add_a_photo_outlined),
+            title: const Text('Cambiar fotografía'),
+            subtitle: const Text('Cámara, galería y encuadre'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: api.writing
+                ? null
+                : () => accountPage(
+                    ProfilePhotoPage(api: api), 'Fotografía actualizada'),
+          ),
+        ])),
+        const FinkiSection('Seguridad de la cuenta'),
+        Card(
+            child: Column(children: [
+          ListTile(
+              leading: const Icon(Icons.lock_outline),
+              title: const Text('Cambiar contraseña'),
+              subtitle: Text(api.offline
+                  ? 'Disponible al conectarte'
+                  : 'Protege tu acceso a FINKI'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: api.offline || api.writing
+                  ? null
+                  : () => accountPage(AccountSecurityPage(api: api),
+                      'Contraseña actualizada. Las demás sesiones se cerraron.')),
+          const Divider(height: 1, indent: 20, endIndent: 20),
+          ListTile(
+              leading: const Icon(Icons.login_outlined),
+              title: const Text('Tus identificadores de acceso'),
+              subtitle: Text(
+                  '${profile?['telefono'] ?? ''}${profile?['correo'] == null ? '\nPuedes agregar un correo opcional en tus datos.' : '\n${profile!['correo']}\nCorreo asociado sin verificación de titularidad. No se utiliza para recuperar contraseñas.'}')),
+        ])),
+        const FinkiSection('Negocio activo',
             subtitle: 'Cada negocio conserva sus propios registros.'),
-        ...businesses.map((b) => ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.storefront_outlined),
-            title: Text(b['nombre'] as String),
-            subtitle: Text(b['rol'] as String),
-            trailing: b['id'] == business?['id']
-                ? const Icon(Icons.check_circle_outline,
-                    color: AppTheme.success)
-                : const Icon(Icons.chevron_right),
-            onTap: () {
-              business = b;
-              selectTab(0);
-            })),
-        if (owner)
-          FinkiButton(
-              label: 'Editar mi negocio',
-              icon: Icons.edit_outlined,
-              kind: FinkiButtonKind.outlined,
-              onPressed: () => openForm('businessEdit')),
-        const SizedBox(height: 12),
-        TextButton.icon(
-            onPressed: () => openForm('business'),
-            icon: const Icon(Icons.add),
-            label: const Text('Crear otro negocio')),
-        const Divider(),
-        const FinkiNotice(
-            'Las operaciones se guardan en tu negocio conectado. Si un envío queda sin confirmar, FINKI conserva su código para reintentarlo sin duplicarlo.'),
+        Card(
+            child: Column(children: [
+          for (final b in businesses)
+            ListTile(
+                leading: const Icon(Icons.storefront_outlined),
+                title: Text(b['nombre'] as String),
+                subtitle: Text(
+                    '${b['rol'] == 'PROPIETARIO' ? 'Propietario' : b['rol'] == 'COLABORADOR' ? 'Colaborador' : b['rol']} · ${b['id'] == business?['id'] ? 'Negocio actual' : 'Cambiar a este negocio'}'),
+                trailing: b['id'] == business?['id']
+                    ? const Icon(Icons.check_circle_outline,
+                        color: AppTheme.success)
+                    : const Icon(Icons.chevron_right),
+                onTap: () {
+                  business = b;
+                  selectTab(0);
+                }),
+        ])),
+        const FinkiSection('Gestión del negocio'),
+        Card(
+            child: Column(children: [
+          if (owner)
+            ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Editar mi negocio'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => openForm('businessEdit')),
+          ListTile(
+              leading: const Icon(Icons.add_business_outlined),
+              title: const Text('Crear otro negocio'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => openForm('business')),
+        ])),
+        const FinkiSection('Sincronización y privacidad'),
+        Card(
+            child: Column(children: [
+          ListTile(
+              leading: Icon(api.offline
+                  ? Icons.cloud_off_outlined
+                  : Icons.cloud_done_outlined),
+              title: Text(api.offline
+                  ? 'Sin conexión al servidor'
+                  : 'Conexión con el servidor disponible'),
+              subtitle: Text(
+                  '${api.localEntries.length} operaciones pendientes de sincronizar. Las propuestas por revisar aún no son operaciones.')),
+          if (api.localEntries.isNotEmpty)
+            ListTile(
+                leading: const Icon(Icons.sync),
+                title: Text(
+                    api.syncing ? 'Sincronizando…' : 'Sincronizar pendientes'),
+                onTap: api.syncing || api.writing
+                    ? null
+                    : () => action(() async {
+                          await api.syncLocal();
+                          await load();
+                        })),
+          const Divider(height: 1, indent: 20, endIndent: 20),
+          ListTile(
+              leading: const Icon(Icons.privacy_tip_outlined),
+              title: const Text('Privacidad y consentimiento'),
+              subtitle: const Text('Tú eliges cuándo pedir ayuda por internet'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => showIntakePrivacy(context, 'Gemini')),
+        ])),
+        const FinkiSection('Ayuda e información'),
+        Card(
+            child: Column(children: [
+          const ListTile(
+              leading: Icon(Icons.info_outline),
+              title: Text('Versión de la aplicación'),
+              subtitle: Text('FINKI 1.0.0 · Compilación 1')),
+          ListTile(
+              leading: const Icon(Icons.help_outline),
+              title: const Text('Cómo usar FINKI'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => showDialog<void>(
+                  context: context,
+                  builder: (c) => AlertDialog(
+                          title: const Text('Registra, revisa y confirma'),
+                          content: const Text(
+                              'Habla, escribe o elige una foto. Revisa y corrige la propuesta antes de confirmar. La voz y el OCR locales funcionan sin internet en Android. La ayuda externa requiere tu autorización y conexión. Los registros pendientes se sincronizan al recuperar conexión con el servidor.'),
+                          actions: [
+                            TextButton(
+                                onPressed: () => Navigator.pop(c),
+                                child: const Text('Entendido'))
+                          ]))),
+        ])),
         const SizedBox(height: 24),
         OutlinedButton.icon(
             onPressed: api.writing ? null : () => action(api.logout),
             icon: const Icon(Icons.logout),
             label: const Text('Cerrar sesión')),
-        const SizedBox(height: 24),
+        const SizedBox(height: 20),
         const Center(
             child: Text('FINKI · Equipo Pingüinos',
                 style: TextStyle(color: AppTheme.textMuted))),
@@ -1358,21 +1582,22 @@ class _BusinessHomeState extends State<BusinessHome>
                         child: NavigationBar(
                             selectedIndex: tab,
                             onDestinationSelected: loading ? null : selectTab,
-                            destinations: const [
-                              NavigationDestination(
+                            destinations: [
+                              const NavigationDestination(
                                   icon: Icon(Icons.dashboard_outlined),
                                   label: 'Inicio'),
-                              NavigationDestination(
+                              const NavigationDestination(
                                   icon: Icon(Icons.receipt_long_outlined),
                                   label: 'Historial'),
-                              NavigationDestination(
+                              const NavigationDestination(
                                   icon: Icon(Icons.people_outline),
                                   label: 'Fiados'),
-                              NavigationDestination(
+                              const NavigationDestination(
                                   icon: Icon(Icons.bar_chart_outlined),
                                   label: 'Reportes'),
                               NavigationDestination(
-                                  icon: Icon(Icons.person_outline),
+                                  icon: ProfileAvatar(
+                                      api: api, radius: 12, navigation: true),
                                   label: 'Perfil')
                             ])))),
       );

@@ -102,7 +102,7 @@ void main() {
       }
       await tester.enterText(
           find.widgetWithText(
-              TextFormField, register ? 'Celular peruano' : 'Celular o correo'),
+              TextFormField, register ? 'Celular peruano' : 'Teléfono o correo electrónico'),
           '999999999');
       await tester.enterText(find.widgetWithText(TextFormField, 'Contraseña'),
           'clave-solo-prueba-visual');
@@ -190,6 +190,24 @@ void main() {
                 ],
               });
             }
+            if (path.endsWith('/ventas/hoy')) {
+              final day = DateTime.now()
+                  .toUtc()
+                  .subtract(const Duration(hours: 5))
+                  .toIso8601String()
+                  .substring(0, 10);
+              final start = DateTime.parse('${day}T05:00:00Z');
+              return json({
+                'negocio_id': business['id'],
+                'fecha': day,
+                'desde': day,
+                'hasta': day,
+                'ventas_minor': '10000',
+                'vigente_desde_utc': start.toIso8601String(),
+                'vigente_hasta_utc':
+                    start.add(const Duration(days: 1)).toIso8601String()
+              });
+            }
             if (path.endsWith('/categorias')) {
               return json({'items': categories, 'next_offset': null});
             }
@@ -207,6 +225,10 @@ void main() {
           RepaintBoundary(key: key, child: PinguinosAiApp(api: api)));
       await tester.pumpAndSettle();
       expect(find.text('S/ 100.00'), findsWidgets);
+      expect(tester.getTopLeft(find.text('Hablar con Finki')).dy,
+          lessThan(tester.getTopLeft(find.text('¿Qué vas a registrar?')).dy));
+      expect(tester.getTopLeft(find.text('Herramientas del negocio')).dy,
+          greaterThan(tester.getTopLeft(find.text('Mi dinero')).dy));
       await capture(tester, key, 'home-${size.width.toInt()}');
       expect(tester.takeException(), isNull);
       for (final label in ['Historial', 'Fiados', 'Reportes', 'Perfil']) {
@@ -227,6 +249,7 @@ void main() {
           await tester.pumpAndSettle();
         }
       }
+      await tester.pumpWidget(const SizedBox());
     });
   }
   for (final kind in [

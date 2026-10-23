@@ -1,0 +1,12 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const {dailySales,dayWindow}=require('../src/services/daily-sales');
+const {buildReport}=require('../src/services/queries');
+const {answer}=require('../src/services/insights');
+const b={id:'one',nombre:'Fixture',zona_horaria:'America/Lima',inicio_historial:'2026-10-01'};
+const op=(id,total,date,type='VENTA',state='CONFIRMADO')=>({id,total_minor:total,fecha_operacion:date,tipo:type,estado:state});
+const data=[[op('cash','5000','2026-10-23'),op('credit','2000','2026-10-23'),op('yesterday','9000','2026-10-22'),op('void','8000','2026-10-23','VENTA','ANULADO'),op('draft','9999','2026-10-23','VENTA','PENDIENTE'),op('expense','1200','2026-10-23','GASTO_OPERATIVO')],[{id:'abono',estado:'CONFIRMADO',fecha_movimiento:'2026-10-23',direccion:'ENTRADA',clase:'COBRO',monto_minor:'1000'}],[{operacion_id:'credit',movimiento_id:'abono',monto_minor:'1000'}],[],[]];
+test('hoy incluye contado/fiado, excluye ayer/anulada/pendiente y no suma abono',()=>{const d=dailySales(b,data,new Date('2026-10-23T20:00:00Z'));assert.equal(d.ventas_minor,'7000');assert.equal(d.desde,'2026-10-23');assert.equal(d.hasta,d.desde);assert.equal(d.negocio_id,'one');assert.equal(d.vigente_desde_utc,'2026-10-23T05:00:00.000Z');assert.equal(d.vigente_hasta_utc,'2026-10-24T05:00:00.000Z');assert.equal(buildReport(b,...data,d.desde,d.hasta).ventas_minor,d.ventas_minor);assert.equal(answer(b,data,'Mis ventas del día',[],[],d.fecha).indicadores.ventas_minor,d.ventas_minor);});
+test('día sin operaciones confirmado en servidor devuelve cero real',()=>{assert.equal(dailySales(b,[[],[],[],[],[]],new Date('2026-10-23T12:00:00Z')).ventas_minor,'0');});
+test('medianoche UTC no cambia el día de Lima; frontera local sí',()=>{const before=dayWindow(b,new Date('2026-10-24T04:59:59.999Z')),after=dayWindow(b,new Date('2026-10-24T05:00:00Z'));assert.equal(before.fecha,'2026-10-23');assert.equal(after.fecha,'2026-10-24');assert.equal(before.vigente_hasta_utc,after.vigente_desde_utc);assert.equal(dayWindow({...b,zona_horaria:'Asia/Tokyo'},new Date('2026-10-23T20:00:00Z')).fecha,'2026-10-24');});
+test('horario de verano: día de 23 y 25 horas, sin asumir UTC-5 para todos',()=>{for(const [date,hours]of [['2026-03-08T15:00:00Z',23],['2026-11-01T15:00:00Z',25]]){const w=dayWindow({...b,zona_horaria:'America/New_York'},new Date(date));assert.equal((Date.parse(w.vigente_hasta_utc)-Date.parse(w.vigente_desde_utc))/3600000,hours);}});

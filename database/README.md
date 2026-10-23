@@ -9,6 +9,11 @@ versiones 001 y 002 en `schema_migraciones`, que el backend comprueba al iniciar
 No contiene usuarios, contraseñas, sesiones, negocios ni datos financieros.
 Guía paso a paso: [`docs/INSTALACION_EQUIPO_FINKI.md`](../docs/INSTALACION_EQUIPO_FINKI.md).
 
+Desde PowerShell, en la raíz del repositorio y con MySQL en PATH, usa
+`mysql.exe --user=root --password --execute="SOURCE database/hackathon_pinguinos_dev.sql"`.
+La contraseña se pide interactivamente; no uses la redirección `<` en PowerShell.
+Para actualizar una base existente no reimportes el instalador ni borres sus datos.
+
 - Se generó copiando, sin cambios, el DDL de `migrations/001_initial_schema.sql` y
   `migrations/002_reporting_views.sql`, sin sus procedimientos instaladores
   (`dbv1_aplicar_001/002`), que Express no usa.

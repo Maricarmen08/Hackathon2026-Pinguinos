@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'api_client.dart';
 import 'app.dart' show showError;
 import 'money.dart';
+import 'local_entry.dart';
 import '../ui/widgets/finki_components.dart';
 
 class TransferPage extends StatefulWidget {
@@ -9,6 +10,7 @@ class TransferPage extends StatefulWidget {
   final Json business;
   final List<Json> accounts;
   final Json? proposal;
+  final Json? localEntry;
   final String? extractionId;
   const TransferPage(
       {super.key,
@@ -16,6 +18,7 @@ class TransferPage extends StatefulWidget {
       required this.business,
       required this.accounts,
       this.proposal,
+      this.localEntry,
       this.extractionId});
   @override
   State<TransferPage> createState() => _TransferPageState();
@@ -83,6 +86,9 @@ class _TransferPageState extends State<TransferPage> {
           'datos': payload
         };
         type = 'CONFIRMAR_PROPUESTA';
+      } else if (widget.localEntry != null) {
+        payload = localConfirmation(widget.localEntry!, type, payload);
+        type = 'CONFIRMAR_PROPUESTA_LOCAL';
       }
       await widget.api.command(
           '/negocios/${widget.business['id']}/comandos', type, payload);

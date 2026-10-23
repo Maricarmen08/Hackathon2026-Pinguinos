@@ -11,10 +11,12 @@ const {json}=require('./domain');
 const {certificateFile}=require('./services/certificate');
 const {createProvider}=require('./services/ai-provider');
 const {intakeService}=require('./services/intake');
+const {localEvidenceService}=require('./services/local-intake');
 const wrap=fn=>(req,res,next)=>Promise.resolve(fn(req,res,next)).catch(next);
 function createApp({db,config}) {
   const app=express(),auth=authService(db,config),execute=commandService(db),reads=readService(db);
   const provider=createProvider(config),intake=intakeService(db,execute,provider);
+  const localEvidence=localEvidenceService(db,execute);
   app.disable('x-powered-by');app.set('trust proxy',false);
   app.set('json replacer',(key,value)=>typeof value==='string'&&key.endsWith('_en')&&/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?$/.test(value)?value.replace(' ','T')+'Z':value);
   app.use((req,res,next)=>{req.requestId=randomUUID();res.set('X-Request-ID',req.requestId);res.set('Cache-Control','no-store');next();});
@@ -32,6 +34,7 @@ function createApp({db,config}) {
     await db.read(s=>requireSession(s,req.actor));next();
   });
   const bid=req=>v.uuid.parse(req.params.id);
+  router.get('/negocios/:id/ventas/hoy',secured,wrap(async(req,res)=>{res.json(await reads.dailySales(bid(req),req.actor));}));
   const filters=(req,allowed)=>{
     if(Object.keys(req.query).some(k=>!allowed.includes(k)))fail(422,'UNSUPPORTED_FILTER','Filtro no admitido por esta ruta');
     return v.filters.parse(req.query);
@@ -52,6 +55,14 @@ function createApp({db,config}) {
   router.get('/auth/me',secured,wrap(async(req,res)=>res.json(await auth.me(req.actor))));
   router.get('/perfil',secured,wrap(async(req,res)=>res.json(await auth.me(req.actor))));
   router.patch('/perfil',secured,wrap(async(req,res)=>res.json(await auth.updateProfile(req.actor,v.profile.parse(req.body)))));
+  const accountLimit=rateLimit({windowMs:15*60000,limit:5,keyGenerator:req=>req.actor.sub,standardHeaders:'draft-8',legacyHeaders:false,
+    handler:(req,res)=>res.status(429).json({error:{code:'ACCOUNT_RATE_LIMIT',message:'Demasiados intentos; espera 15 minutos'},request_id:req.requestId})});
+  router.post('/perfil/contrasena',secured,accountLimit,wrap(async(req,res)=>res.json(await auth.changePassword(req.actor,v.changePassword.parse(req.body)))));
+  const photos=require('./services/profile-photo').profilePhotoService(config);
+  const photoLimit=rateLimit({windowMs:60000,limit:10,keyGenerator:req=>req.actor.sub,standardHeaders:'draft-8',legacyHeaders:false});
+  router.get('/perfil/foto',secured,wrap(async(req,res)=>res.json(await photos.get(req.actor))));
+  router.put('/perfil/foto',secured,photoLimit,express.raw({type:'application/octet-stream',limit:'512kb'}),wrap(async(req,res)=>res.json(await photos.put(req.actor,req.body))));
+  router.delete('/perfil/foto',secured,photoLimit,wrap(async(req,res)=>res.json(await photos.remove(req.actor))));
   router.get('/negocios',secured,wrap(async(req,res)=>res.json({items:(await auth.me(req.actor)).negocios})));
   router.post('/negocios',secured,sendCommand('CREAR_NEGOCIO'));
   router.get('/negocios/:id',secured,wrap(async(req,res)=>res.json((await db.read(s=>membership(s,bid(req),req.actor.sub))).business)));
@@ -65,13 +76,17 @@ function createApp({db,config}) {
   for(const route of ['indicadores','reportes/actividad'])router.get('/negocios/:id/'+route,secured,wrap(async(req,res)=>res.json(await reads.indicators(bid(req),req.actor,filters(req,['desde','hasta'])))));
   router.get('/negocios/:id/cuentas',secured,wrap(async(req,res)=>{filters(req,[]);res.json({items:(await reads.indicators(bid(req),req.actor)).cuentas});}));
   const aiLimit=rateLimit({windowMs:60000,limit:6,keyGenerator:req=>req.actor.sub,standardHeaders:'draft-8',legacyHeaders:false});
-  router.get('/negocios/:id/ia/estado',secured,wrap(async(req,res)=>{await db.read(s=>membership(s,bid(req),req.actor.sub));res.json({configurado:provider.enabled,proveedor:provider.name,requiere_consentimiento:true});}));
+  router.get('/negocios/:id/ia/estado',secured,wrap(async(req,res)=>{await db.read(s=>membership(s,bid(req),req.actor.sub));res.json({configurado:provider.enabled,proveedor:provider.name,requiere_consentimiento:true,...(provider.availability?provider.availability():{})});}));
+  router.post('/negocios/:id/ia/evidencia-local',secured,rateLimit({windowMs:60000,limit:20,keyGenerator:req=>req.actor.sub,standardHeaders:'draft-8',legacyHeaders:false}),express.raw({type:'application/octet-stream',limit:'7mb'}),wrap(async(req,res)=>{
+    if(!Buffer.isBuffer(req.body)||req.body.length===0)fail(422,'EMPTY_FILE','El archivo está vacío');
+    res.status(201).json(await localEvidence(bid(req),req.actor,v.uuid.parse(req.query.id),req.body));
+  }));
   router.get('/negocios/:id/ia/propuestas',secured,wrap(async(req,res)=>{
     const f=filters(req,['limit','offset']);
     const rows=await db.read(async s=>{await requireSession(s,req.actor);await membership(s,bid(req),req.actor.sub,true);return s.list('extracciones',{negocio_id:bid(req),estado:'REQUIERE_REVISION'},{order:[['creado_en','DESC'],['id','DESC']],limit:f.limit+1,offset:f.offset});});
     res.json({items:rows.slice(0,f.limit).map(r=>({id:r.id,version:String(r.version),resultado:json(r.resultado),estado:r.estado,tipo_entrada:r.tipo_entrada,transcripcion:r.tipo_entrada==='AUDIO'?r.texto_entrada:null,creado_en:r.creado_en})),next_offset:rows.length>f.limit?f.offset+f.limit:null});
   }));
-  router.post('/negocios/:id/consultas',secured,wrap(async(req,res)=>{const q=require('zod').z.object({pregunta:require('zod').z.string().trim().min(1).max(300)}).strict().parse(req.body);res.json(await reads.ask(bid(req),req.actor,q.pregunta));}));
+  router.post('/negocios/:id/consultas',secured,wrap(async(req,res)=>{const z=require('zod').z,q=z.object({pregunta:z.string().trim().min(1).max(300),consentimiento_externo:z.boolean().optional().default(false)}).strict().parse(req.body);res.json(await require('./services/insights-assistant').askAssistant(reads,bid(req),req.actor,q.pregunta,q.consentimiento_externo,provider));}));
   router.post('/negocios/:id/ia/analizar',secured,aiLimit,express.raw({type:'application/octet-stream',limit:'7mb'}),wrap(async(req,res)=>{
     const id=v.uuid.parse(req.query.id),consent=req.get('X-Finki-Consent')==='1';
     const bytes=Buffer.isBuffer(req.body)?req.body:null;

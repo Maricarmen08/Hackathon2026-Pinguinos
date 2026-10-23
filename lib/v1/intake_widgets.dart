@@ -4,6 +4,7 @@ import '../ui/widgets/finki_components.dart';
 import 'api_client.dart';
 import 'money.dart';
 import 'presentation.dart';
+import 'receipt_details.dart';
 
 const intakeTypes = <String, (String, String, IconData)>{
   'VENTA': ('Venta', 'Revisar venta', Icons.storefront_outlined),
@@ -95,10 +96,15 @@ Future<void> showIntakePrivacy(BuildContext context, String provider) =>
 class IntakeCapture extends StatelessWidget {
   final TextEditingController text;
   final bool consent, busy, recording, picking, transcript;
+  final bool preparingVoice, transcribingVoice;
+  final bool imageText, analyzingImage;
+  final VoidCallback? onRetake;
   final int seconds;
   final bool? configured;
   final String provider;
   final String? error;
+  final VoidCallback? onCloud;
+  final bool needsHelp;
   final ValueChanged<bool> onConsent;
   final VoidCallback onVoice,
       onCancel,
@@ -126,10 +132,17 @@ class IntakeCapture extends StatelessWidget {
       required this.onManual,
       required this.onRetry,
       this.error,
+      this.onCloud,
+      this.needsHelp = false,
+      this.preparingVoice = false,
+      this.transcribingVoice = false,
+      this.imageText = false,
+      this.analyzingImage = false,
+      this.onRetake,
       this.transcript = false});
   @override
   Widget build(BuildContext context) {
-    final ready = configured == true && consent && !busy && !picking;
+    final ready = !busy && !picking;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Text('Hablar con Finki',
           style: Theme.of(context).textTheme.headlineSmall),
@@ -148,6 +161,8 @@ class IntakeCapture extends StatelessWidget {
                         contentPadding:
                             const EdgeInsets.symmetric(horizontal: 8),
                         controlAffinity: ListTileControlAffinity.leading,
+                        subtitle: const Text(
+                            'Solo se envía contenido si eliges ayuda por internet.'),
                         value: consent,
                         onChanged: busy || recording || picking
                             ? null
@@ -165,28 +180,12 @@ class IntakeCapture extends StatelessWidget {
                             label: const Text('Cómo se usan mis datos'))),
                   ]))),
       const SizedBox(height: 16),
-      if (configured == null) ...[
+      if (needsHelp && configured != true) ...[
         const FinkiNotice(
-            'Comprobando disponibilidad. Si no tienes conexión, usa el registro manual.'),
-        Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-                onPressed: onRetry, child: const Text('Volver a comprobar'))),
-      ] else if (configured == false) ...[
-        const FinkiNotice(
-            'El asistente no está disponible por ahora. Puedes continuar con el registro manual.'),
-        TextButton.icon(
-            onPressed: onManual,
-            icon: const Icon(Icons.edit_outlined),
-            label: const Text('Registrar manualmente')),
+            'La ayuda por internet no está disponible por ahora. Puedes seguir con los datos que reconoció tu celular o registrar manualmente.'),
         TextButton(
-            onPressed: onRetry, child: const Text('Reintentar conexión')),
-      ] else if (!consent)
-        const Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: Text(
-                'Acepta la autorización para usar voz, texto o imágenes.',
-                style: TextStyle(color: AppTheme.textMuted, fontSize: 13))),
+            onPressed: onRetry, child: const Text('Comprobar disponibilidad')),
+      ],
       if (recording) ...[
         Container(
             padding: const EdgeInsets.all(20),
@@ -234,15 +233,48 @@ class IntakeCapture extends StatelessWidget {
         TextField(
             controller: text,
             enabled: !busy && !picking,
-            maxLength: 1000,
+            maxLength: imageText ? 6000 : 1000,
             minLines: 2,
             maxLines: 4,
             decoration: InputDecoration(
-                labelText: transcript
-                    ? 'Esto escuché · puedes corregirlo'
-                    : 'O escríbelo aquí…',
+                labelText: imageText
+                    ? 'Texto de la imagen · puedes corregirlo'
+                    : transcript
+                        ? 'Esto escuché · puedes corregirlo'
+                        : 'O escríbelo aquí…',
                 hintText: 'Vendí 50 soles de arroz',
                 counterText: '')),
+        if (imageText)
+          Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                  icon: const Icon(Icons.unfold_more),
+                  label: const Text('Ver texto completo'),
+                  onPressed: ready
+                      ? () => showDialog<void>(
+                          context: context,
+                          builder: (c) =>
+                              AlertDialog(
+                                  title:
+                                      const Text('Texto reconocido completo'),
+                                  content: SizedBox(
+                                      width: double.maxFinite,
+                                      height: MediaQuery.sizeOf(c).height * .55,
+                                      child: TextField(
+                                          controller: text,
+                                          maxLength: 6000,
+                                          maxLines: null,
+                                          expands: true,
+                                          decoration: const InputDecoration(
+                                              alignLabelWithHint: true,
+                                              labelText:
+                                                  'Revisa o corrige el texto'))),
+                                  actions: [
+                                    TextButton(
+                                        onPressed: () => Navigator.pop(c),
+                                        child: const Text('Listo'))
+                                  ]))
+                      : null)),
         const SizedBox(height: 12),
         FilledButton.tonalIcon(
             onPressed: ready ? onAnalyze : null,
@@ -250,19 +282,46 @@ class IntakeCapture extends StatelessWidget {
             label: Text(
                 transcript ? 'Interpretar texto corregido' : 'Interpretar')),
       ],
+      if (needsHelp && !recording) ...[
+        const SizedBox(height: 12),
+        TextButton.icon(
+            onPressed: !busy && !picking && consent && configured == true
+                ? onCloud
+                : null,
+            icon: const Icon(Icons.help_outline),
+            label: const Text('Pedir ayuda por internet')),
+        if (!consent)
+          const Text(
+              'Para pedir ayuda por internet, acepta la autorización de envío.',
+              style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
+      ],
       if (busy || picking) ...[
         const SizedBox(height: 16),
         const LinearProgressIndicator(),
         const SizedBox(height: 10),
         Text(
-            picking
-                ? 'Elige una imagen para continuar…'
-                : 'Preparando tu propuesta…',
+            analyzingImage
+                ? 'Analizando imagen en tu celular…'
+                : preparingVoice
+                    ? 'Preparando el micrófono del celular…'
+                    : transcribingVoice
+                        ? 'Transcribiendo tu grabación en el celular…'
+                        : picking
+                            ? 'Elige una imagen para continuar…'
+                            : 'Preparando tu propuesta…',
             textAlign: TextAlign.center),
+        if (transcribingVoice)
+          TextButton(
+              onPressed: onCancel, child: const Text('Cancelar transcripción')),
       ],
       if (error != null) ...[
         const SizedBox(height: 16),
         FinkiNotice(error!, warning: true),
+        if (imageText && onRetake != null)
+          TextButton.icon(
+              onPressed: ready ? onRetake : null,
+              icon: const Icon(Icons.camera_alt_outlined),
+              label: const Text('Repetir fotografía')),
         TextButton(
             onPressed: onManual, child: const Text('Continuar manualmente')),
       ],
@@ -272,11 +331,13 @@ class IntakeCapture extends StatelessWidget {
 
 class IntakeProposalCard extends StatelessWidget {
   final Json proposal;
+  final ReceiptDetails? receipt;
   final bool enabled, hasEvidence;
   final VoidCallback onReview, onChange, onLink;
   const IntakeProposalCard(
       {super.key,
       required this.proposal,
+      this.receipt,
       required this.onReview,
       required this.onChange,
       required this.onLink,
@@ -304,10 +365,21 @@ class IntakeProposalCard extends StatelessWidget {
                     Expanded(
                         child: Text(
                             proposal['concepto']?.toString() ??
-                                (ambiguous ? 'Pago por identificar' : type.$1),
+                                (ambiguous
+                                    ? 'Registro por completar'
+                                    : type.$1),
                             style: Theme.of(context).textTheme.titleLarge)),
                   ]),
                   const SizedBox(height: 12),
+                  if (receipt?.merchant != null) ...[
+                    Text(receipt!.merchant!,
+                        style: const TextStyle(color: AppTheme.textMuted)),
+                    if (receipt!.taxId != null)
+                      Text('RUC: ${receipt!.taxId}',
+                          style: const TextStyle(
+                              color: AppTheme.textMuted, fontSize: 13)),
+                    const SizedBox(height: 10),
+                  ],
                   Text(
                       proposal['monto_minor'] == null
                           ? 'Importe por completar'
@@ -316,6 +388,25 @@ class IntakeProposalCard extends StatelessWidget {
                           fontSize: 30,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.navy)),
+                  if (receipt != null && receipt!.items.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    for (final item in receipt!.items)
+                      Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 3),
+                          child: Row(children: [
+                            Expanded(
+                                child: Text(
+                                    '${item.quantity == null ? '' : '${item.quantity} × '}${item.name}')),
+                            const SizedBox(width: 8),
+                            Text(soles(item.amountMinor)),
+                          ])),
+                  ],
+                  if (receipt != null && proposal['medio'] != null)
+                    Text('Medio de pago: ${proposal['medio']}',
+                        style: const TextStyle(color: AppTheme.textMuted)),
+                  if (receipt != null && proposal['referencia'] != null)
+                    Text('Referencia: ${proposal['referencia']}',
+                        style: const TextStyle(color: AppTheme.textMuted)),
                   if (proposal['fecha'] != null) ...[
                     const SizedBox(height: 6),
                     Text(dateEs(proposal['fecha'], today: limaToday()),
@@ -324,7 +415,7 @@ class IntakeProposalCard extends StatelessWidget {
                   const SizedBox(height: 14),
                   Text(
                       ambiguous
-                          ? '¿Qué representa este pago o registro?'
+                          ? '¿Fue una venta, un gasto u otro registro?'
                           : 'Operación sugerida: ${type.$1}',
                       style: const TextStyle(fontWeight: FontWeight.w600)),
                   if (proposal['es_pago'] == true) ...[

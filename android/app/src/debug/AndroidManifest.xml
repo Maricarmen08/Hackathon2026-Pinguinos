@@ -4,5 +4,8 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
-    <application android:usesCleartextTraffic="true" />
+    <application android:usesCleartextTraffic="true">
+        <activity android:name=".OfflineValidationActivity" android:exported="true"
+            android:permission="android.permission.DUMP" android:launchMode="singleTask" />
+    </application>
 </manifest>

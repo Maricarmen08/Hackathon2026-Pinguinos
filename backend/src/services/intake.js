@@ -10,7 +10,7 @@ async function saveProposal(s,business,actor,p,changed){
   const found=p.sha256&&(await s.get('comprobantes',{negocio_id:business.id,sha256:p.sha256}));
   if(found)fail(409,'DUPLICATE_EVIDENCE','Esta imagen o grabación ya fue analizada. Revisa tu historial.');
   if(p.evidence){await s.insert('comprobantes',p.evidence);changed.push({tabla:'comprobantes',registro:await s.get('comprobantes',{id:p.evidence.id,negocio_id:business.id})});}
-  const row={id:p.id,negocio_id:business.id,comprobante_id:p.evidence?.id||null,tipo_entrada:p.kind,texto_entrada:p.text||null,texto_extraido:p.result.texto_visible,proveedor:p.provider||'OpenAI',modelo:p.model,version_esquema:'1.0.0',estado:'REQUIERE_REVISION',resultado:p.result,correccion_usuario:{consentimiento:{version:p.consentVersion||'legacy-v3',proveedor:p.provider||'OpenAI',aceptado_en:utc(new Date()),usuario_id:actor.sub}},creado_por:actor.sub};
+  const row={id:p.id,negocio_id:business.id,comprobante_id:p.evidence?.id||p.comprobanteId||null,tipo_entrada:p.kind,texto_entrada:p.text||null,texto_extraido:p.result.texto_visible,proveedor:p.provider||'OpenAI',modelo:p.model,version_esquema:'1.0.0',estado:'REQUIERE_REVISION',resultado:p.result,correccion_usuario:p.localSource?{procesamiento:{tipo:'LOCAL',fuente:p.localSource,version:'1.0.0'}}:{consentimiento:{version:p.consentVersion||'legacy-v3',proveedor:p.provider||'OpenAI',aceptado_en:utc(new Date()),usuario_id:actor.sub}},creado_por:actor.sub};
   await s.insert('extracciones',row);changed.push({tabla:'extracciones',registro:await s.get('extracciones',{id:p.id,negocio_id:business.id})});
 }
 function intakeService(db,execute,provider){
@@ -63,7 +63,7 @@ async function confirmProposal(s,business,actor,p,changed,financial){
       if(p.datos.movimiento)p.datos.movimiento.referencia_externa=ref;
       for(const payment of p.datos.pagos_iniciales||[])payment.referencia_externa=ref;
     }
-  if(p.tipo==='REGISTRAR_OPERACION')p.datos.operacion={...p.datos.operacion,origen:row.tipo_entrada==='AUDIO'?'VOZ':row.tipo_entrada==='IMAGEN'?'IMAGEN':'MANUAL',extraccion_id:row.id};
+  if(p.tipo==='REGISTRAR_OPERACION')p.datos.operacion={...p.datos.operacion,origen:row.tipo_entrada==='AUDIO'||json(row.correccion_usuario)?.procesamiento?.fuente==='VOZ'?'VOZ':row.tipo_entrada==='IMAGEN'?'IMAGEN':'MANUAL',extraccion_id:row.id};
   await financial(s,business,actor,p.tipo,p.datos,changed);
     targets=changed.slice(before).filter(c=>['operaciones','movimientos'].includes(c.tabla));
   }
