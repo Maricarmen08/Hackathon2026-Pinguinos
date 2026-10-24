@@ -3,9 +3,9 @@
 ## Instalación oficial: un solo archivo
 
 **Para instalar FINKI importa únicamente `hackathon_pinguinos_dev.sql`.** Crea la base
-`hackathon_pinguinos_dev` vacía con la estructura final: 23 tablas (21 de producto + 2 de
-control), 5 vistas, 58 claves foráneas y 108 restricciones CHECK, y registra las
-versiones 001 y 002 en `schema_migraciones`, que el backend comprueba al iniciar.
+`hackathon_pinguinos_dev` vacía con la estructura final: 24 tablas (22 de producto + 2 de
+control), 5 vistas, 59 claves foráneas y 114 restricciones CHECK, y registra las
+versiones 001, 002 y 003 en `schema_migraciones`, que el backend comprueba al iniciar.
 No contiene usuarios, contraseñas, sesiones, negocios ni datos financieros.
 Guía paso a paso: [`docs/INSTALACION_EQUIPO_FINKI.md`](../docs/INSTALACION_EQUIPO_FINKI.md).
 
@@ -14,9 +14,8 @@ Desde PowerShell, en la raíz del repositorio y con MySQL en PATH, usa
 La contraseña se pide interactivamente; no uses la redirección `<` en PowerShell.
 Para actualizar una base existente no reimportes el instalador ni borres sus datos.
 
-- Se generó copiando, sin cambios, el DDL de `migrations/001_initial_schema.sql` y
-  `migrations/002_reporting_views.sql`, sin sus procedimientos instaladores
-  (`dbv1_aplicar_001/002`), que Express no usa.
+- Derivado del DDL de 001/002 y de los cambios de usuarios/identidades de 003,
+  sin rutinas instaladoras en el SQL limpio.
 - `CREATE DATABASE` sin `IF NOT EXISTS`: si la base ya existe se detiene con el error
   1007 y no toca nada. No contiene DROP, DELETE ni TRUNCATE.
 - Las sentencias son ASCII: el resultado no depende de la codificación del cliente.
@@ -36,12 +35,15 @@ Para actualizar una base existente no reimportes el instalador ni borres sus dat
 
 ### Cambios futuros de estructura
 
-1. Crear `migrations/003_<nombre>.sql` aditivo para las bases ya instaladas.
+1. Crear `migrations/004_<nombre>.sql` aditivo para las bases ya instaladas.
 2. Regenerar `hackathon_pinguinos_dev.sql` para que incluya ese cambio y su fila en
    `schema_migraciones`.
 3. Ejecutar `.\tool\finki-verify-install.ps1`: la comparación debe salir idéntica.
 
 ---
+
+
+Google Sign-In y migración incremental: [GOOGLE_SIGN_IN_FINKI.md](../docs/GOOGLE_SIGN_IN_FINKI.md). No reimportar el SQL limpio en una instalación existente.
 
 # Historial técnico V1 (instalación por migraciones)
 

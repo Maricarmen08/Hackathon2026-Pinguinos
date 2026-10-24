@@ -12,7 +12,7 @@ const mysql=require('mysql2/promise'),fs=require('node:fs'),os=require('node:os'
 const {spawnSync}=require('node:child_process'),{randomBytes}=require('node:crypto');
 const SOURCE='hackathon_pinguinos_dev',TARGET='hackathon_pinguinos_install_check';
 const SQL_FILE=path.join(__dirname,'../../database/hackathon_pinguinos_dev.sql');
-const EXPECTED={tables:23,views:5,fks:58,checks:108};
+const EXPECTED={tables:24,views:5,fks:59,checks:114};
 const args=new Set(process.argv.slice(2));
 const host=process.env.DB_HOST||'127.0.0.1',port=Number(process.env.DB_PORT||3306);
 const user=process.env.FINKI_ADMIN_USER||'root',password=process.env.FINKI_ADMIN_PASSWORD||'';

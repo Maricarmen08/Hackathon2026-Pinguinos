@@ -12,6 +12,34 @@ import 'package:hackathon_pinguinos_mvp/ui/widgets/finki_brand.dart';
 import 'widget_test.dart' show MemoryStore, session, json;
 
 void main() {
+  for (final suppliedProfile in [false, true]) {
+    testWidgets(
+        'cuenta Google solo informa sin pedir contraseña: $suppliedProfile',
+        (t) async {
+      var writes = 0;
+      final api = ApiClient(
+          store: MemoryStore(),
+          client: MockClient((r) async {
+            writes++;
+            return json({});
+          }))
+        ..session = {
+          ...session(),
+          'usuario': {'tiene_clave': suppliedProfile}
+        };
+      await t.pumpWidget(MaterialApp(
+          home: AccountSecurityPage(
+              api: api, hasPassword: suppliedProfile ? false : null)));
+      await t.pumpAndSettle();
+      expect(find.text('Acceso con Google'), findsOneWidget);
+      expect(find.byType(TextFormField), findsNothing);
+      expect(find.text('Guardar contraseña'), findsNothing);
+      expect(
+          find.textContaining('No necesitas una contraseña'), findsOneWidget);
+      expect(writes, 0);
+      api.client.close();
+    });
+  }
   for (final origin in [ImageSource.camera, ImageSource.gallery]) {
     testWidgets(
         'foto $origin previsualiza, confirma, normaliza y conserva caché privada',

@@ -4,7 +4,7 @@ const { hashPassword, verifyPassword, tokens } = require('../security');
 const { hash, nextVersion } = require('../domain');
 const { fail } = require('../errors');
 const utc = date => date.toISOString().replace('T',' ').replace('Z','');
-const publicUser = u => ({ id:u.id,nombre:u.nombre,telefono:u.telefono_normalizado,correo:u.correo_normalizado,version:String(u.version) });
+const publicUser = u => ({ id:u.id,nombre:u.nombre,telefono:u.telefono_normalizado,correo:u.correo_normalizado,version:String(u.version),google_vinculado:Boolean(u.acceso_google),tiene_clave:Boolean(u.password_hash) });
 async function requireSession(s,claims,lock) {
   const u=await s.get('usuarios',{id:claims.sub},lock);
   const d=await s.get('dispositivos',{id:claims.did,usuario_id:claims.sub},lock);
@@ -29,6 +29,7 @@ function authService(db,config) {
   }
   return {
     jwt,
+    newSession,
     async register(input) {
       const encoded=await hashPassword(input.clave),uid=randomUUID(),did=randomUUID();
       return db.transaction(async s=>{
@@ -94,6 +95,7 @@ function authService(db,config) {
     },
     async changePassword(claims,input) {
       const original=await db.read(async s=>(await requireSession(s,claims)).user);
+      if(!original.password_hash)fail(422,'PASSWORD_NOT_AVAILABLE','Tu cuenta utiliza Google. Continúa con Google para entrar.');
       if(!await verifyPassword(input.actual,original.password_hash))fail(422,'WRONG_PASSWORD','La contraseña actual no es correcta');
       const encoded=await hashPassword(input.nueva);
       return db.transaction(async s=>{

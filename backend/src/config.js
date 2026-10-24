@@ -23,6 +23,8 @@ function loadConfig(env = process.env, filename = '.env') {
     DB_PASSWORD: z.string(),
     JWT_SECRET: z.string().min(43), JWT_REFRESH_SECRET: z.string().min(43),
     CORS_ORIGINS: z.string().default(''),
+    GOOGLE_AUTH_ENABLED:z.enum(['0','1']).default('0').transform(v=>v==='1'),
+    GOOGLE_CLIENT_IDS:z.string().default(''),
     AI_ENABLED: z.enum(['0','1']).default('0').transform(v=>v==='1'),
     AI_PROVIDER: z.enum(['gemini','openai']).default('gemini'),
     GEMINI_API_KEY: z.string().default(''),

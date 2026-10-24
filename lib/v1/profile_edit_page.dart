@@ -39,7 +39,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       await widget.api.request('PATCH', '/perfil', body: {
         'expected_version': widget.profile['version'].toString(),
         'nombre': name.text.trim(),
-        'telefono': phone.text.trim(),
+        if (phone.text.trim().isNotEmpty || widget.profile['telefono'] != null)
+          'telefono': phone.text.trim(),
         'correo': email.text.trim().isEmpty ? null : email.text.trim(),
       });
       if (mounted) Navigator.pop(context, true);
@@ -80,10 +81,12 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                     decoration: const InputDecoration(
                         labelText: 'Teléfono con código de país',
                         hintText: '+51987654321'),
-                    validator: (v) =>
-                        RegExp(r'^\+?[1-9]\d{7,14}$').hasMatch(v?.trim() ?? '')
-                            ? null
-                            : 'Usa 987654321 o +51987654321'),
+                    validator: (v) => (widget.profile['telefono'] == null &&
+                                (v?.trim().isEmpty ?? true)) ||
+                            RegExp(r'^\+?[1-9]\d{7,14}$')
+                                .hasMatch(v?.trim() ?? '')
+                        ? null
+                        : 'Usa 987654321 o +51987654321'),
                 const SizedBox(height: 16),
                 TextFormField(
                     controller: email,

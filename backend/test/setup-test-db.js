@@ -15,13 +15,13 @@ async function setup() {
     if(!server.version.startsWith('8.4.')||server.db!=='hackathon_pinguinos_test'||server.account.split('@')[0].toLowerCase()==='root')throw new Error('Servidor/cuenta/destino no autorizados para preparación aislada');
     const [[count]]=await connection.execute('SELECT COUNT(*) AS n FROM information_schema.tables WHERE table_schema=?',[c.DB_NAME]);
     if(Number(count.n)!==0)throw new Error('La base de pruebas no está vacía: no se modifica ni reinicializa');
-    const schema=readFileSync(path.join(__dirname,'../../database/migrations/001_initial_schema.sql'),'utf8');
+    const schema=readFileSync(path.join(__dirname,'../../database/hackathon_pinguinos_dev.sql'),'utf8');
     const views=readFileSync(path.join(__dirname,'../../database/migrations/002_reporting_views.sql'),'utf8');
     const tables=[...schema.matchAll(/CREATE TABLE [a-z_]+ \([\s\S]*?\) ENGINE=InnoDB[^;]*;/g)].map(m=>m[0]);
     const viewStatements=[...views.matchAll(/CREATE SQL SECURITY INVOKER VIEW [\s\S]*?;/g)].map(m=>m[0]);
-    if(tables.length!==23||viewStatements.length!==5)throw new Error('Formato/versión de migraciones no esperado');
+    if(tables.length!==24||viewStatements.length!==5)throw new Error('Formato/versión de migraciones no esperado');
     for(const statement of [...tables,...viewStatements])await connection.query(statement);
-    await connection.execute("INSERT INTO schema_migraciones(version,nombre,contrato_version) VALUES(1,'001_initial_schema.sql','1.0.0'),(2,'002_reporting_views.sql','1.0.0')");
+    await connection.execute("INSERT INTO schema_migraciones(version,nombre,contrato_version) VALUES(1,'001_initial_schema.sql','1.0.0'),(2,'002_reporting_views.sql','1.0.0'),(3,'003_google_identity.sql','1.1.0')");
     console.log('Esquema de pruebas preparado desde DDL aprobado, sin demo ni cambios en desarrollo.');
   } finally {if(connection)connection.release();await db.close();}
 }
