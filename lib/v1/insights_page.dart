@@ -17,7 +17,8 @@ class _InsightsPageState extends State<InsightsPage> {
   String? answer, error, cachedAt, asked;
   String source = 'REGISTROS';
   bool busy = false;
-  bool unsupported = false, consent = false, externalPaused = false;
+  bool unsupported = false, externalPaused = false;
+  List<Json> clarificationOptions = [];
   static const suggestions = <String, String>{
     'Ventas de hoy': '¿Cuánto vendí hoy?',
     'Ventas del mes': '¿Cuánto vendí este mes?',
@@ -44,6 +45,7 @@ class _InsightsPageState extends State<InsightsPage> {
       cachedAt = null;
       asked = q;
       unsupported = false;
+      clarificationOptions = [];
     });
     try {
       final r = await widget.api.request(
@@ -54,6 +56,9 @@ class _InsightsPageState extends State<InsightsPage> {
         setState(() {
           answer = r['respuesta'] as String;
           source = r['fuente'] as String? ?? 'REGISTROS';
+          clarificationOptions = (r['opciones'] as List? ?? [])
+              .map((value) => Map<String, dynamic>.from(value as Map))
+              .toList();
         });
       }
       if (owner != null) {
@@ -63,7 +68,9 @@ class _InsightsPageState extends State<InsightsPage> {
               key,
               jsonEncode({
                 'at': DateTime.now().toIso8601String(),
-                'answer': r['respuesta']
+                'answer': r['respuesta'],
+                'source': source,
+                'options': clarificationOptions,
               }));
         } catch (_) {/* A cache write must not hide a valid server answer. */}
       }
@@ -78,6 +85,10 @@ class _InsightsPageState extends State<InsightsPage> {
             final saved = jsonDecode(raw) as Map;
             setState(() {
               answer = saved['answer'] as String;
+              source = saved['source'] as String? ?? 'REGISTROS';
+              clarificationOptions = (saved['options'] as List? ?? [])
+                  .map((value) => Map<String, dynamic>.from(value as Map))
+                  .toList();
               cachedAt = saved['at'] as String;
             });
           }
@@ -96,7 +107,6 @@ class _InsightsPageState extends State<InsightsPage> {
     } finally {
       if (mounted) {
         setState(() => busy = false);
-        consent = false;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           final target = answerKey.currentContext;
           if (mounted && target != null) {
@@ -105,6 +115,30 @@ class _InsightsPageState extends State<InsightsPage> {
           }
         });
       }
+    }
+  }
+
+  Future<void> requestExternalHelp() async {
+    final original = asked;
+    if (busy || original == null || externalPaused) return;
+    final accepted = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+                scrollable: true,
+                title: const Text(
+                    '¿Quieres que la IA te ayude a entender tu pregunta?'),
+                content: const Text(
+                    'Con tu autorización se enviará a Gemini una versión filtrada de tu pregunta, con vocabulario financiero. No se enviarán tus registros, ventas, deudas ni saldos.\n\nEvita incluir nombres, teléfonos u otros datos personales. También puedes seguir usando las sugerencias sin ayuda externa.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: const Text('Ahora no')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(dialogContext, true),
+                      child: const Text('Autorizar y continuar')),
+                ]));
+    if (accepted == true && mounted && question.text.trim() == original) {
+      await ask(original, external: true);
     }
   }
 
@@ -133,7 +167,7 @@ class _InsightsPageState extends State<InsightsPage> {
               maxLines: 3,
               decoration: const InputDecoration(
                   labelText: 'Tu pregunta', hintText: '¿Quién me debe más?'),
-              onChanged: (_) => setState(() {}),
+              onChanged: (_) => setState(() => unsupported = false),
               onSubmitted: busy ? null : ask),
           FilledButton.icon(
               onPressed: busy || question.text.trim().isEmpty
@@ -185,22 +219,28 @@ class _InsightsPageState extends State<InsightsPage> {
                           SelectableText(answer ?? error!,
                               style:
                                   const TextStyle(fontSize: 16, height: 1.45)),
+                          if (clarificationOptions.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Wrap(spacing: 8, runSpacing: 8, children: [
+                              for (final option in clarificationOptions)
+                                OutlinedButton(
+                                    onPressed: busy
+                                        ? null
+                                        : () =>
+                                            ask(option['pregunta'] as String),
+                                    child: Text(option['titulo'] as String)),
+                            ]),
+                          ],
                           if (unsupported) ...[
-                            CheckboxListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text(
-                                  'Autorizo enviar solo esta pregunta a Gemini para identificar qué consultar. No se enviarán registros ni saldos.'),
-                              value: consent,
-                              onChanged: busy
-                                  ? null
-                                  : (v) => setState(() => consent = v ?? false),
-                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                                'Puedes reformular tu pregunta o pedir ayuda opcional de IA.'),
                             OutlinedButton(
-                              onPressed: busy || !consent || externalPaused
+                              onPressed: busy || externalPaused
                                   ? null
-                                  : () => ask(question.text, external: true),
-                              child: const Text(
-                                  'Ayuda para interpretar mi pregunta'),
+                                  : requestExternalHelp,
+                              child:
+                                  const Text('Ayudarme a entender mi pregunta'),
                             ),
                           ],
                           if (externalPaused)
@@ -210,7 +250,8 @@ class _InsightsPageState extends State<InsightsPage> {
                             Padding(
                                 padding: const EdgeInsets.only(top: 10),
                                 child: Text(
-                                    source == 'ORIENTACION'
+                                    source == 'ORIENTACION' ||
+                                            source == 'ACLARACION'
                                         ? 'Finki · Ayuda de uso.'
                                         : 'Fuente: registros del negocio seleccionado.',
                                     style: const TextStyle(fontSize: 12))),
