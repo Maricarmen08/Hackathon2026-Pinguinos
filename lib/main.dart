@@ -258,7 +258,7 @@ class _FinkiDesktopShowcaseState extends State<_FinkiDesktopShowcase> {
                                   children: [
                                     Expanded(
                                       child: _FeatureCard(
-                                        icon: Icons.mic_rounded,
+                                        icon: Icons.mic_none_rounded,
                                         title: 'IA por Voz e Imagen',
                                         subtitle:
                                             'Registra ventas y gastos con audio o foto.',
@@ -268,7 +268,7 @@ class _FinkiDesktopShowcaseState extends State<_FinkiDesktopShowcase> {
                                     Expanded(
                                       child: _FeatureCard(
                                         icon: Icons
-                                            .account_balance_wallet_rounded,
+                                            .account_balance_wallet_outlined,
                                         title: 'Finanzas Ordenadas',
                                         subtitle:
                                             'Controla caja diaria, cobros y pagos.',
@@ -277,7 +277,7 @@ class _FinkiDesktopShowcaseState extends State<_FinkiDesktopShowcase> {
                                     SizedBox(width: 14),
                                     Expanded(
                                       child: _FeatureCard(
-                                        icon: Icons.verified_user_rounded,
+                                        icon: Icons.verified_user_outlined,
                                         title: 'Acceso al Crédito',
                                         subtitle:
                                             'Constancias e indicadores de tu negocio.',

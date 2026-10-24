@@ -20,7 +20,7 @@ if (-not [Uri]::TryCreate($ApiBaseUrl, [UriKind]::Absolute, [ref]$api) -or
 
 Push-Location $project
 try {
-    & "$PSScriptRoot\flutter-local.ps1" build web --release --no-wasm-dry-run --output build/web `
+    & "$PSScriptRoot\flutter-local.ps1" build web --release --no-tree-shake-icons --no-wasm-dry-run --output build/web `
         "--dart-define=GOOGLE_WEB_CLIENT_ID=$GoogleWebClientId" `
         "--dart-define=API_BASE_URL=$ApiBaseUrl"
     if ($LASTEXITCODE -ne 0) { throw 'La compilacion Web fallo. No se preparo backend/web_build.' }
