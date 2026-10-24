@@ -48,6 +48,21 @@ void main() {
 void listaDeRenglones() {
   final rules = LocalRules();
   group('lista de renglones con importe', () {
+    test('importe primero y verbo repetido: Vendí 50 soles de arroz, vendí 10 soles de aceite', () {
+      final p = rules.interpret('Vendí 50 soles de arroz, vendí 10 soles de aceite');
+      expect(p['intencion'], 'VENTA');
+      expect(p['monto_minor'], '6000');
+      expect(p['concepto'], 'Arroz · Aceite');
+    });
+    test('importe primero con pesos', () {
+      final p = rules.interpret('Vendí 500 pesos de arroz, vendí 100 pesos de jamón');
+      expect(p['monto_minor'], '60000');
+      expect(p['concepto'], 'Arroz · Jamón');
+    });
+    test('dos operaciones distintas siguen pidiendo el total', () {
+      final p = rules.interpret('Vendí 50 soles y gasté 20 soles');
+      expect(p['monto_minor'], isNull);
+    });
     for (final row in [
       ['comida para perro 10 soles, hueso de juguete 15 soles', 'TEXTO'],
       ['comida para perro 10 soles, hueso de juguete 15 soles', 'IMAGEN'],

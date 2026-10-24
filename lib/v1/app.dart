@@ -207,8 +207,9 @@ class _AuthPageState extends State<AuthPage> {
                               ? 'Perú: 987654321. Otro país: con código, ej. +573001234567'
                               : null,
                           helperMaxLines: 2,
-                          prefixIcon:
-                              const Icon(Icons.alternate_email_rounded)),
+                          prefixIcon: Icon(register
+                              ? Icons.phone_iphone_rounded
+                              : Icons.alternate_email_rounded)),
                       keyboardType: register
                           ? TextInputType.phone
                           : TextInputType.text,
@@ -228,8 +229,6 @@ class _AuthPageState extends State<AuthPage> {
                           labelText: 'Contraseña',
                           counterText: '',
                           prefixIcon: const Icon(Icons.lock_outline_rounded),
-                          helperText:
-                              register ? 'De 12 a 128 caracteres' : null,
                           suffixIcon: IconButton(
                               onPressed: () => setState(() => hidden = !hidden),
                               tooltip: hidden

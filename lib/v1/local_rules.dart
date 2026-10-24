@@ -106,6 +106,50 @@ List<ReceiptItem> parseMoneyList(String text) {
       '(\\d+(?:[.,]\\d{1,2})?|(?:(?:$words)\\s+){0,6}(?:$words))\\s+(?:sol(?:es)?|pesos?|dolar(?:es)?|bolivianos?)\\b');
   final found = amount.allMatches(plain).toList();
   if (found.length < 2) return const [];
+  // "Vendí 50 soles de arroz, vendí 10 soles de aceite": el nombre va
+  // después del importe y el mismo verbo puede repetirse.
+  final lead = RegExp(r'^\s*((?:vendi|gaste|compre|pague|cobre|fie)\b)?\s*$')
+      .firstMatch(plain.substring(0, found.first.start));
+  if (lead != null) {
+    final first = lead[1];
+    final verbs = RegExp(r'(?:vendi|gaste|compre|pague|cobre|fie)\b');
+    final named = <ReceiptItem>[];
+    for (var i = 0; i < found.length; i++) {
+      final m = found[i];
+      final end = i + 1 < found.length ? found[i + 1].start : plain.length;
+      var seg = plain.substring(m.end, end);
+      var shown = source.substring(m.end, end);
+      if (i + 1 < found.length) {
+        final tail = RegExp(
+                r'[\s,;.]*(?:\b(?:y|e|mas)\b)?\s*(?:(vendi|gaste|compre|pague|cobre|fie)\b)?\s*$')
+            .firstMatch(seg)!;
+        if (tail[1] != null && tail[1] != first) return const [];
+        seg = seg.substring(0, tail.start);
+        shown = shown.substring(0, tail.start);
+      }
+      final head = RegExp(r'^[\s,;.:]*(?:(?:de|del|en|por|para)\s+)?')
+          .firstMatch(seg)!;
+      shown = shown.substring(head.end).replaceFirst(RegExp(r'[\s,;.:]+$'), '');
+      if (!RegExp(r'^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ ._-]{1,59}$')
+              .hasMatch(shown) ||
+          verbs.hasMatch(_plain(shown)) ||
+          RegExp(r'\b(?:cada|c/u|unidad)\b', caseSensitive: false)
+              .hasMatch(shown)) {
+        return const [];
+      }
+      final raw = m[1]!;
+      final minor = _numeric(raw) ??
+          (() {
+            final n = _spoken(raw);
+            return n == null || n <= 0
+                ? null
+                : (BigInt.from(n) * BigInt.from(100)).toString();
+          })();
+      if (minor == null) return const [];
+      named.add(ReceiptItem(shown[0].toUpperCase() + shown.substring(1), minor, null));
+    }
+    return named;
+  }
   final items = <ReceiptItem>[];
   var from = 0;
   for (var i = 0; i < found.length; i++) {

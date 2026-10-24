@@ -8,6 +8,7 @@ import 'local_entry.dart';
 import 'local_media.dart';
 import 'receipt_details.dart';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
@@ -384,7 +385,9 @@ class _IntakePageState extends State<IntakePage> {
           source = 'IMAGEN';
         });
         throw const FormatException(
-            'En esta plataforma puedes pedir ayuda con la imagen o escribir los datos.');
+            kIsWeb
+                ? 'En el navegador no puedo leer la imagen sola. Pide ayuda por internet o escribe los datos.'
+                : 'En esta plataforma puedes pedir ayuda con la imagen o escribir los datos.');
       }
       if (widget.api.userId == null) {
         throw const FormatException(
@@ -486,8 +489,9 @@ class _IntakePageState extends State<IntakePage> {
         busy = false;
       });
       if (!consent || configured != true) {
-        setState(() => error =
-            'La voz sin conexión no está disponible en español. Puedes escribir o autorizar la grabación alternativa por internet.');
+        setState(() => error = kIsWeb
+            ? 'En el navegador la voz necesita la ayuda por internet, y ahora no está disponible. Puedes escribir lo que pasó o usar la app del celular.'
+            : 'La voz sin conexión no está disponible en español. Puedes escribir o autorizar la grabación alternativa por internet.');
         return;
       }
       final use = await showDialog<bool>(
