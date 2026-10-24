@@ -29,6 +29,8 @@ function createApp({db,config}) {
   }));
   app.use(express.json({limit:'64kb',strict:true}));
   const router=express.Router();
+  // Mensaje en español para cualquier límite de uso (antes algunos devolvían texto en inglés).
+  const tooMany=(req,res)=>res.status(429).json({error:{code:'RATE_LIMIT',message:'Estás haciendo muchas acciones seguidas. Espera un minuto e inténtalo otra vez.'},request_id:req.requestId});
   const limiter=rateLimit({windowMs:60*1000,limit:10,standardHeaders:'draft-8',legacyHeaders:false,
     handler:(req,res)=>res.status(429).json({error:{code:'AUTH_RATE_LIMIT',message:'Demasiados intentos; espera un minuto'},request_id:req.requestId})});
   const secured=wrap(async(req,_res,next)=>{
@@ -69,7 +71,7 @@ function createApp({db,config}) {
     handler:(req,res)=>res.status(429).json({error:{code:'ACCOUNT_RATE_LIMIT',message:'Demasiados intentos; espera 15 minutos'},request_id:req.requestId})});
   router.post('/perfil/contrasena',secured,accountLimit,wrap(async(req,res)=>res.json(await auth.changePassword(req.actor,v.changePassword.parse(req.body)))));
   const photos=require('./services/profile-photo').profilePhotoService(config);
-  const photoLimit=rateLimit({windowMs:60000,limit:10,keyGenerator:req=>req.actor.sub,standardHeaders:'draft-8',legacyHeaders:false});
+  const photoLimit=rateLimit({windowMs:60000,limit:10,keyGenerator:req=>req.actor.sub,standardHeaders:'draft-8',legacyHeaders:false,handler:tooMany});
   router.get('/perfil/foto',secured,wrap(async(req,res)=>res.json(await photos.get(req.actor))));
   router.put('/perfil/foto',secured,photoLimit,express.raw({type:'application/octet-stream',limit:'512kb'}),wrap(async(req,res)=>res.json(await photos.put(req.actor,req.body))));
   router.delete('/perfil/foto',secured,photoLimit,wrap(async(req,res)=>res.json(await photos.remove(req.actor))));
@@ -85,9 +87,9 @@ function createApp({db,config}) {
   router.get('/negocios/:id/operaciones/:operationId',secured,wrap(async(req,res)=>res.json(await reads.operation(bid(req),req.actor,v.uuid.parse(req.params.operationId)))));
   for(const route of ['indicadores','reportes/actividad'])router.get('/negocios/:id/'+route,secured,wrap(async(req,res)=>res.json(await reads.indicators(bid(req),req.actor,filters(req,['desde','hasta'])))));
   router.get('/negocios/:id/cuentas',secured,wrap(async(req,res)=>{filters(req,[]);res.json({items:(await reads.indicators(bid(req),req.actor)).cuentas});}));
-  const aiLimit=rateLimit({windowMs:60000,limit:6,keyGenerator:req=>req.actor.sub,standardHeaders:'draft-8',legacyHeaders:false});
+  const aiLimit=rateLimit({windowMs:60000,limit:6,keyGenerator:req=>req.actor.sub,standardHeaders:'draft-8',legacyHeaders:false,handler:tooMany});
   router.get('/negocios/:id/ia/estado',secured,wrap(async(req,res)=>{await db.read(s=>membership(s,bid(req),req.actor.sub));res.json({configurado:provider.enabled,proveedor:provider.name,requiere_consentimiento:true,...(provider.availability?provider.availability():{})});}));
-  router.post('/negocios/:id/ia/evidencia-local',secured,rateLimit({windowMs:60000,limit:20,keyGenerator:req=>req.actor.sub,standardHeaders:'draft-8',legacyHeaders:false}),express.raw({type:'application/octet-stream',limit:'7mb'}),wrap(async(req,res)=>{
+  router.post('/negocios/:id/ia/evidencia-local',secured,rateLimit({windowMs:60000,limit:20,keyGenerator:req=>req.actor.sub,standardHeaders:'draft-8',legacyHeaders:false,handler:tooMany}),express.raw({type:'application/octet-stream',limit:'7mb'}),wrap(async(req,res)=>{
     if(!Buffer.isBuffer(req.body)||req.body.length===0)fail(422,'EMPTY_FILE','El archivo está vacío');
     res.status(201).json(await localEvidence(bid(req),req.actor,v.uuid.parse(req.query.id),req.body));
   }));

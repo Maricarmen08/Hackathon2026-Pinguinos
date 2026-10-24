@@ -33,6 +33,7 @@ function authService(db,config) {
     async register(input) {
       const encoded=await hashPassword(input.clave),uid=randomUUID(),did=randomUUID();
       return db.transaction(async s=>{
+        if(await s.get('usuarios',{telefono_normalizado:input.telefono}))fail(409,'PHONE_TAKEN','Ese celular ya tiene una cuenta. Toca «Ya tengo cuenta» para entrar.');
         await s.insert('usuarios',{id:uid,nombre:input.nombre,telefono_normalizado:input.telefono,correo_normalizado:input.correo,password_hash:encoded,estado:'ACTIVO'});
         await s.insert('dispositivos',{id:did,usuario_id:uid,...input.dispositivo});
         const session=await newSession(s,uid,did);

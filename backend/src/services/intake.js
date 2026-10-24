@@ -36,7 +36,7 @@ function intakeService(db,execute,provider){
       if(bytes){
         const dir=path.resolve(process.env.FINKI_PRIVATE_DIR||path.join(__dirname,'../../private'),'evidence',bid);await mkdir(dir,{recursive:true,mode:0o700});
         await writeFile(path.join(dir,sha),bytes,{flag:'wx',mode:0o600}).catch(e=>{if(e.code!=='EEXIST')throw e;});
-        evidence={id:randomUUID(),negocio_id:bid,tipo:mime==='audio/wav'?'AUDIO':result.medio==='YAPE'?'YAPE':result.medio==='PLIN'?'PLIN':'OTRO',storage_key:path.posix.join('evidence',bid,sha),mime_type:mime,bytes:bytes.length,sha256:sha,estado_archivo:'DISPONIBLE',referencia_externa:result.referencia,total_minor:result.monto_minor,moneda:'PEN',creado_por:actor.sub};
+        evidence={id:randomUUID(),negocio_id:bid,tipo:mime==='audio/wav'?'AUDIO':result.medio==='YAPE'?'YAPE':result.medio==='PLIN'?'PLIN':'OTRO',storage_key:path.posix.join('evidence',bid,sha),mime_type:mime,bytes:bytes.length,sha256:sha,estado_archivo:'DISPONIBLE',referencia_externa:result.referencia,total_minor:result.monto_minor,moneda:null,creado_por:actor.sub};
       }
       await execute(bid,{command_id:randomUUID(),dispositivo_id:actor.did,tipo:'GUARDAR_PROPUESTA_INTERNA',payload:{id,sha256:sha,kind:mime==='audio/wav'?'AUDIO':bytes?'IMAGEN':'TEXTO',text:transcript,result,evidence,consentVersion,provider:provider.name,model:provider.model||provider.config.AI_EXTRACTION_MODEL}},actor);
       return {id,resultado:result,estado:'REQUIERE_REVISION',transcripcion:mime==='audio/wav'?transcript:null};

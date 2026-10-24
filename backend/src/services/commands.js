@@ -1,4 +1,5 @@
 'use strict';
+const {COUNTRIES}=require('../countries');
 const { randomUUID } = require('node:crypto');
 const { fail } = require('../errors');
 const { hash,canonical,json,dateWithin,nextVersion,today } = require('../domain');
@@ -21,8 +22,9 @@ function commandService(db) {
       if(!counter) {
         if(c.tipo!=='CREAR_NEGOCIO')fail(403,'BUSINESS_FORBIDDEN','No tienes acceso al negocio');
         if(await s.get('negocios',{id:bid}))fail(409,'BUSINESS_INCONSISTENT','Negocio requiere revisión de configuración');
-        if(c.payload.inicio_historial>today())fail(422,'INVALID_DATE','Inicio de historial futuro');
-        await s.insert('negocios',{...c.payload,zona_horaria:'America/Lima',moneda:'PEN',estado:'ACTIVO'});
+        const {pais,...fields}=c.payload,country=COUNTRIES[pais||'PE'];
+        if(fields.inicio_historial>today(country.zona_horaria))fail(422,'INVALID_DATE','Inicio de historial futuro');
+        await s.insert('negocios',{...fields,zona_horaria:country.zona_horaria,moneda:country.moneda,estado:'ACTIVO'});
         await s.insert('membresias',{id:randomUUID(),negocio_id:bid,usuario_id:actor.sub,rol:'PROPIETARIO',estado:'ACTIVA',creado_por:actor.sub});
         await s.insert('sync_contadores',{negocio_id:bid,ultimo_seq:'0'});
         counter={ultimo_seq:'0'};created=true;
@@ -42,7 +44,7 @@ function commandService(db) {
         changed.push({tabla:'negocios',registro:business});
         changed.push({tabla:'membresias',registro:context.member});
         const cashId=randomUUID();
-        await s.insert('cuentas',{id:cashId,negocio_id:bid,nombre:'Efectivo',tipo:'EFECTIVO',moneda:'PEN',saldo_inicial_minor:'0',fecha_apertura:business.inicio_historial,creado_por:actor.sub});
+        await s.insert('cuentas',{id:cashId,negocio_id:bid,nombre:'Efectivo',tipo:'EFECTIVO',moneda:business.moneda,saldo_inicial_minor:'0',fecha_apertura:business.inicio_historial,creado_por:actor.sub});
         changed.push({tabla:'cuentas',registro:await s.get('cuentas',{id:cashId,negocio_id:bid})});
       } else if(c.tipo==='GUARDAR_PROPUESTA_INTERNA') {
         await saveProposal(s,business,actor,c.payload,changed);
@@ -61,7 +63,7 @@ function commandService(db) {
         if(!table)fail(422,'UNKNOWN_COMMAND','Comando no implementado');
         const row={...c.payload,negocio_id:bid,creado_por:actor.sub};
         if(table==='categorias')row.nombre_normalizado=row.nombre.normalize('NFKC').toLowerCase().replace(/\s+/g,' ');
-        if(table==='cuentas') {dateWithin(row.fecha_apertura,business);row.moneda='PEN';}
+        if(table==='cuentas') {dateWithin(row.fecha_apertura,business);row.moneda=business.moneda;}
         await s.insert(table,row);changed.push({tabla:table,registro:await s.get(table,{id:row.id,negocio_id:bid})});
       } else if(c.tipo==='ACTUALIZAR_NEGOCIO') {
         const {expected_version,...data}=c.payload;

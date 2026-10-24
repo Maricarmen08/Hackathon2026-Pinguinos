@@ -24,7 +24,7 @@ function localEvidenceService(db,execute){
     const dir=path.resolve(process.env.FINKI_PRIVATE_DIR||path.join(__dirname,'../../private'),'evidence',bid);
     await mkdir(dir,{recursive:true,mode:0o700});
     await writeFile(path.join(dir,sha),bytes,{flag:'wx',mode:0o600}).catch(e=>{if(e.code!=='EEXIST')throw e;});
-    await execute(bid,{command_id:randomUUID(),dispositivo_id:actor.did,tipo:'GUARDAR_EVIDENCIA_LOCAL_INTERNA',payload:{id,sha256:sha,mime_type:mime,bytes:bytes.length,tipo:'OTRO',estado_archivo:'DISPONIBLE',storage_key:path.posix.join('evidence',bid,sha),moneda:'PEN'}},actor);
+    await execute(bid,{command_id:randomUUID(),dispositivo_id:actor.did,tipo:'GUARDAR_EVIDENCIA_LOCAL_INTERNA',payload:{id,sha256:sha,mime_type:mime,bytes:bytes.length,tipo:'OTRO',estado_archivo:'DISPONIBLE',storage_key:path.posix.join('evidence',bid,sha),moneda:null}},actor);
     return {id,sha256:sha};
   };
 }

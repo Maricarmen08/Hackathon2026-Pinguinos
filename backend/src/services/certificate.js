@@ -7,10 +7,11 @@ const {buildReport}=require('./queries');
 const {today,json}=require('../domain');
 const {utc}=require('./auth');
 const {fail}=require('../errors');
+const {symbolFor}=require('../countries');
 const digest=b=>createHash('sha256').update(b).digest('hex');
 const storage=()=>path.resolve(process.env.FINKI_PRIVATE_DIR||path.join(__dirname,'../../private'));
-function soles(value){if(value==null)return 'Sin meses completos';const n=BigInt(value),a=n<0n?-n:n;return `${n<0n?'-':''}S/ ${a/100n}.${String(a%100n).padStart(2,'0')}`;}
-function renderCertificate(r,id,generated) { return require('./certificate-renderer')(r,id,generated,soles); }
+function soles(value,symbol='S/'){if(value==null)return 'Sin meses completos';const n=BigInt(value),a=n<0n?-n:n;return `${n<0n?'-':''}${symbol} ${a/100n}.${String(a%100n).padStart(2,'0')}`;}
+function renderCertificate(r,id,generated) { return require('./certificate-renderer')(r,id,generated,v=>soles(v,symbolFor(r.moneda))); }
 async function createCertificate(s,business,actor,payload,counter){
   if(payload.desde>payload.hasta||payload.hasta>today(business.zona_horaria)||Number(payload.hasta.slice(0,4))-Number(payload.desde.slice(0,4))>10)fail(422,'INVALID_PERIOD','Elige un periodo válido de hasta diez años, sin fechas futuras');
   const data=await Promise.all(['operaciones','movimientos','aplicaciones','cuentas','cierres_diarios'].map(t=>s.list(t,{negocio_id:business.id})));
@@ -24,7 +25,7 @@ async function createCertificate(s,business,actor,payload,counter){
   const key=path.posix.join('reports',business.id,`${sha}.pdf`);
   await writeFile(path.join(storage(),key),bytes,{flag:'wx',mode:0o600}).catch(e=>{if(e.code!=='EEXIST')throw e;});
   // A SQL rollback can leave an unreferenced private file; never a published report.
-  await s.insert('reportes',{id:payload.id,negocio_id:business.id,desde:payload.desde,hasta:payload.hasta,zona_horaria:business.zona_horaria,moneda:'PEN',version_formula:r.version_formula,corte_sync_seq:r.corte_sync_seq,estado:'LISTO',parametros:{desde:payload.desde,hasta:payload.hasta},indicadores:r,storage_key:key,sha256:sha,generado_en:generated,creado_por:actor.sub});
+  await s.insert('reportes',{id:payload.id,negocio_id:business.id,desde:payload.desde,hasta:payload.hasta,zona_horaria:business.zona_horaria,moneda:business.moneda,version_formula:r.version_formula,corte_sync_seq:r.corte_sync_seq,estado:'LISTO',parametros:{desde:payload.desde,hasta:payload.hasta},indicadores:r,storage_key:key,sha256:sha,generado_en:generated,creado_por:actor.sub});
   return s.get('reportes',{id:payload.id,negocio_id:business.id});
 }
 async function certificateFile(row){

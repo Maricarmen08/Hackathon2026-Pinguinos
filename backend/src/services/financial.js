@@ -17,7 +17,7 @@ function financialService() {
     };
     const account=async(id,date)=>{
       const row=await get('cuentas',id);
-      if(!row.activa || row.moneda!=='PEN')fail(422,'ACCOUNT_UNAVAILABLE','Cuenta inactiva o moneda incompatible');
+      if(!row.activa || row.moneda!==business.moneda)fail(422,'ACCOUNT_UNAVAILABLE','Cuenta inactiva o moneda incompatible');
       dateWithin(date,business,row);return row;
     };
     const outstanding=async o=>{
@@ -36,7 +36,7 @@ function financialService() {
         if(!cash){
           const member=await s.get('membresias',{negocio_id:bid,usuario_id:actor.sub,estado:'ACTIVA'});
           if(member?.rol!=='PROPIETARIO')fail(403,'OWNER_REQUIRED','Pide al titular crear una cuenta para recibir o pagar dinero');
-          cash=await add('cuentas',{id:randomUUID(),nombre:'Efectivo',tipo:'EFECTIVO',moneda:'PEN',saldo_inicial_minor:'0',fecha_apertura:business.inicio_historial,activa:1});
+          cash=await add('cuentas',{id:randomUUID(),nombre:'Efectivo',tipo:'EFECTIVO',moneda:business.moneda,saldo_inicial_minor:'0',fecha_apertura:business.inicio_historial,activa:1});
         }
         movement.cuenta_id=cash.id;
       }

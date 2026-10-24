@@ -62,7 +62,7 @@ function buildReport(business,operations,movements,applications,accounts,closure
   const activeDays=new Set(periodOps.filter(o=>o.tipo==='VENTA'&&o.fecha_operacion>=start).map(o=>o.fecha_operacion)).size;
   const recorded=ops.filter(o=>o.fecha_operacion<=to).map(o=>o.fecha_operacion).sort();
   return {
-    negocio_id:business.id,moneda:'PEN',desde:from,hasta:to,version_formula:'1.1.0',
+    negocio_id:business.id,moneda:business.moneda||'PEN',desde:from,hasta:to,version_formula:'1.1.0',
     negocio_nombre:business.nombre,inicio_historial_declarado:business.inicio_historial,primer_registro:recorded[0]||null,ultimo_registro:recorded.at(-1)||null,
     serie_mensual:series,meses_con_informacion:new Set(periodOps.map(o=>o.fecha_operacion.slice(0,7))).size,
     meses_con_ventas:series.filter(m=>BigInt(m.ventas_minor)>0n).length,dias_observados:days,

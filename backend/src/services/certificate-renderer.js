@@ -27,7 +27,7 @@ module.exports=function render(r,id,generated,soles){return new Promise((resolve
  field('Fecha de emisión',issued,309,y,244);
  y=Math.max(holderEnd,metaY+40)+10;
  const periodEnd=field('Periodo evaluado',period(r.desde,r.hasta),left,y,245);
- field('Moneda','Soles (PEN)',309,y,244);
+ field('Moneda',require('../countries').currencyName(r.moneda),309,y,244);
  y=Math.max(periodEnd,y+39)+14;
  if(y+245>755){doc.addPage();y=50;} y=section('01  RESUMEN GENERAL',y);
  box(left,y,width,27,navy);text('CONCEPTO',left+14,y+8,340,8,true,'#FFFFFF');text('IMPORTE (S/)',left+366,y+8,129,8,true,'#FFFFFF');y+=31;
