@@ -330,11 +330,11 @@ class IntakeCapture extends StatelessWidget {
             analyzingImage
                 ? 'Analizando imagen en tu celular…'
                 : preparingVoice
-                    ? 'Preparando el micrófono del celular…'
+                    ? 'Preparando el micrófono…'
                     : transcribingVoice
                         ? 'Transcribiendo tu grabación en el celular…'
                         : picking
-                            ? 'Elige una imagen para continuar…'
+                            ? 'Un momento…'
                             : 'Preparando tu propuesta…',
             textAlign: TextAlign.center),
         if (transcribingVoice)
