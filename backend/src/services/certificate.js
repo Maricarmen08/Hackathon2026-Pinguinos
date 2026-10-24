@@ -11,13 +11,15 @@ const {symbolFor}=require('../countries');
 const digest=b=>createHash('sha256').update(b).digest('hex');
 const storage=()=>path.resolve(process.env.FINKI_PRIVATE_DIR||path.join(__dirname,'../../private'));
 function soles(value,symbol='S/'){if(value==null)return 'Sin meses completos';const n=BigInt(value),a=n<0n?-n:n;return `${n<0n?'-':''}${symbol} ${a/100n}.${String(a%100n).padStart(2,'0')}`;}
-function renderCertificate(r,id,generated) { return require('./certificate-renderer')(r,id,generated,v=>soles(v,symbolFor(r.moneda))); }
+function renderCertificate(r,id,generated) { return require('./certificate-renderer')(r,id,generated,v=>soles(v,symbolFor(r.moneda)).replace(/(\d)(?=(\d{3})+\.)/g,'$1,')); }
 async function createCertificate(s,business,actor,payload,counter){
   if(payload.desde>payload.hasta||payload.hasta>today(business.zona_horaria)||Number(payload.hasta.slice(0,4))-Number(payload.desde.slice(0,4))>10)fail(422,'INVALID_PERIOD','Elige un periodo válido de hasta diez años, sin fechas futuras');
   const data=await Promise.all(['operaciones','movimientos','aplicaciones','cuentas','cierres_diarios'].map(t=>s.list(t,{negocio_id:business.id})));
+  const categories=new Map((await s.list('categorias',{negocio_id:business.id})).map(c=>[c.id,c.nombre]));
   const owners=await s.list('membresias',{negocio_id:business.id,rol:'PROPIETARIO',estado:'ACTIVA'});
   const owner=owners[0]?await s.get('usuarios',{id:owners[0].usuario_id}):null;
-  const r={...buildReport(business,...data,payload.desde,payload.hasta),corte_sync_seq:String(counter.ultimo_seq),titular_nombre:owner?.nombre||null,zona_horaria:business.zona_horaria,version_documento:'2.0'};
+  const r={...buildReport(business,...data,payload.desde,payload.hasta),corte_sync_seq:String(counter.ultimo_seq),titular_nombre:owner?.nombre||null,zona_horaria:business.zona_horaria,version_documento:'3.0'};
+  r.gastos_por_categoria=r.gastos_por_categoria.map(c=>({...c,nombre:c.categoria_id?(categories.get(c.categoria_id)||'Sin categoría'):'Sin categoría'}));
   // Do not persist private operational rows in report summaries or sync payloads.
   delete r.cuentas;delete r.pendientes;
   const generated=utc(new Date()),bytes=await renderCertificate(r,payload.id,generated),sha=digest(bytes);

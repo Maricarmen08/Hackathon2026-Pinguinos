@@ -61,8 +61,21 @@ function buildReport(business,operations,movements,applications,accounts,closure
   const days=start<=to?Math.floor((Date.parse(to)-Date.parse(start))/86400000)+1:0;
   const activeDays=new Set(periodOps.filter(o=>o.tipo==='VENTA'&&o.fecha_operacion>=start).map(o=>o.fecha_operacion)).size;
   const recorded=ops.filter(o=>o.fecha_operacion<=to).map(o=>o.fecha_operacion).sort();
+  // Datos agregados para el análisis de la constancia: sin nombres de personas.
+  const salesCount=periodOps.filter(o=>o.tipo==='VENTA').length;
+  const receivables=outstanding.filter(o=>['VENTA','SALDO_CXC'].includes(o.tipo)&&BigInt(o.pendiente_minor)>0n);
+  const aging=[0n,0n,0n,0n],byPerson=new Map();
+  for(const o of receivables){
+    const age=Math.max(0,Math.floor((Date.parse(to)-Date.parse(o.fecha_operacion))/86400000)),amount=BigInt(o.pendiente_minor);
+    aging[age<=30?0:age<=60?1:age<=90?2:3]+=amount;
+    const key=o.tercero_id||'sin-persona';byPerson.set(key,(byPerson.get(key)||0n)+amount);
+  }
+  const debtors=[...byPerson.values()].sort((a,b)=>(a<b?1:a>b?-1:0));
+  const byCategory=new Map();
+  for(const o of periodOps.filter(o=>o.tipo==='GASTO_OPERATIVO')){const key=o.categoria_id||'sin-categoria';byCategory.set(key,(byCategory.get(key)||0n)+BigInt(o.total_minor));}
+  const expenseCategories=[...byCategory.entries()].sort((a,b)=>(a[1]<b[1]?1:a[1]>b[1]?-1:0)).slice(0,5).map(([categoria_id,v])=>({categoria_id:categoria_id==='sin-categoria'?null:categoria_id,total_minor:v.toString()}));
   return {
-    negocio_id:business.id,moneda:business.moneda||'PEN',desde:from,hasta:to,version_formula:'1.1.0',
+    negocio_id:business.id,moneda:business.moneda||'PEN',desde:from,hasta:to,version_formula:'1.2.0',
     negocio_nombre:business.nombre,inicio_historial_declarado:business.inicio_historial,primer_registro:recorded[0]||null,ultimo_registro:recorded.at(-1)||null,
     serie_mensual:series,meses_con_informacion:new Set(periodOps.map(o=>o.fecha_operacion.slice(0,7))).size,
     meses_con_ventas:series.filter(m=>BigInt(m.ventas_minor)>0n).length,dias_observados:days,
@@ -73,6 +86,9 @@ function buildReport(business,operations,movements,applications,accounts,closure
     cobros_deudas_iniciales_minor:oldCollected.toString(),pagos_deudas_iniciales_minor:oldPaid.toString(),
     entradas_externas_minor:incoming.toString(),salidas_externas_minor:outgoing.toString(),
     por_cobrar_minor:pendingIn.toString(),por_pagar_minor:pendingOut.toString(),
+    ventas_cantidad:salesCount,saldo_cuentas_minor:balances.reduce((n,a)=>n+BigInt(a.saldo_registrado_minor),0n).toString(),
+    antiguedad_por_cobrar_minor:aging.map(String),deudores_cantidad:debtors.length,deudores_top3_minor:debtors.slice(0,3).reduce((n,v)=>n+v,0n).toString(),
+    gastos_por_categoria:expenseCategories,
     cuentas:balances,pendientes:outstanding.filter(o=>BigInt(o.pendiente_minor)>0n),
     meses_completos:months.length,promedio_mensual_ventas_minor:n?((total+n/2n)/n).toString():null,ventas_mensuales:months,
     primera_venta_registrada:firstSale,meses_historial:historyMonths,
