@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/theme/app_theme.dart';
 import 'v1/api_client.dart';
@@ -38,6 +39,20 @@ class _FinkiDesktopShowcase extends StatefulWidget {
 
 class _FinkiDesktopShowcaseState extends State<_FinkiDesktopShowcase> {
   bool _phoneFrame = true;
+  bool _showMobileModal = false;
+  bool _copied = false;
+
+  static const String _publicUrl =
+      'https://hackathon2026-pinguinos.onrender.com';
+
+  Future<void> _copyLink() async {
+    await Clipboard.setData(const ClipboardData(text: _publicUrl));
+    if (!mounted) return;
+    setState(() => _copied = true);
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _copied = false);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,8 +112,8 @@ class _FinkiDesktopShowcaseState extends State<_FinkiDesktopShowcase> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF07162E),
-              Color(0xFF0F2D5E),
+              Color(0xFF06152D),
+              Color(0xFF0D2B59),
               Color(0xFF154B99),
             ],
           ),
@@ -113,7 +128,7 @@ class _FinkiDesktopShowcaseState extends State<_FinkiDesktopShowcase> {
                 height: 380,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppTheme.cyan.withValues(alpha: 0.12),
+                  color: AppTheme.cyan.withValues(alpha: 0.10),
                 ),
               ),
             ),
@@ -125,223 +140,439 @@ class _FinkiDesktopShowcaseState extends State<_FinkiDesktopShowcase> {
                 height: 440,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppTheme.brandBlue.withValues(alpha: 0.22),
+                  color: AppTheme.brandBlue.withValues(alpha: 0.20),
                 ),
               ),
             ),
             SafeArea(
-              child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 48, vertical: 24),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 11,
-                      child: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 7),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                    color:
-                                        Colors.white.withValues(alpha: 0.22)),
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.auto_awesome_rounded,
-                                      color: Color(0xFF38BDF8), size: 16),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'HACKATHON 2026 · EQUIPO PINGÜINOS',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.8,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1280),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 44, vertical: 24),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 11,
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 590),
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 7),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            Colors.white.withValues(alpha: 0.1),
+                                        borderRadius:
+                                            BorderRadius.circular(999),
+                                        border: Border.all(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.22)),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.verified_rounded,
+                                              color: Color(0xFF38BDF8),
+                                              size: 16),
+                                          SizedBox(width: 8),
+                                          Flexible(
+                                            child: Text(
+                                              'DESAFÍO 4 · EQUIPO LOS PINGÜINOS DE MADAGASCAR',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w800,
+                                                letterSpacing: 0.7,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 22),
-                            Row(
-                              children: [
-                                Container(
-                                  width: 54,
-                                  height: 54,
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color(0xFF185FC9),
-                                        Color(0xFF09AFDC)
+                                    const SizedBox(height: 20),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          width: 60,
+                                          height: 60,
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius:
+                                                BorderRadius.circular(18),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: const Color(0xFF09AFDC)
+                                                    .withValues(alpha: 0.35),
+                                                blurRadius: 18,
+                                                offset: const Offset(0, 6),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Image.asset(
+                                            'assets/branding/finki_logo_display.png',
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (_, __, ___) =>
+                                                const Icon(
+                                                    Icons.insights_rounded,
+                                                    color: AppTheme.brandBlue,
+                                                    size: 32),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'FINKI',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 42,
+                                                height: 1.0,
+                                                fontWeight: FontWeight.w900,
+                                                letterSpacing: -1.0,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Asistente financiero con IA por voz e imagen',
+                                              style: TextStyle(
+                                                color: const Color(0xFF38BDF8)
+                                                    .withValues(alpha: 0.95),
+                                                fontSize: 13.5,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ],
                                     ),
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF09AFDC)
-                                            .withValues(alpha: 0.35),
-                                        blurRadius: 18,
-                                        offset: const Offset(0, 6),
+                                    const SizedBox(height: 18),
+                                    const Text(
+                                      'Ordena las finanzas de tu negocio y facilita tu acceso al crédito.',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 31,
+                                        height: 1.18,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: -0.5,
                                       ),
-                                    ],
-                                  ),
-                                  child: const Icon(
-                                      Icons.insights_rounded,
-                                      color: Colors.white,
-                                      size: 30),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'Asistente de IA por voz e imagen que digitaliza ingresos y gastos de pequeños negocios informales para ordenar sus finanzas y facilitar su acceso al crédito.',
+                                      style: TextStyle(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.84),
+                                        fontSize: 15,
+                                        height: 1.5,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 22),
+                                    const Row(
+                                      children: [
+                                        Expanded(
+                                          child: _FeatureCard(
+                                            icon: Icons.mic_none_rounded,
+                                            title: 'IA por Voz e Imagen',
+                                            subtitle:
+                                                'Digitaliza ingresos y gastos hablando o tomando foto a notas y comprobantes.',
+                                          ),
+                                        ),
+                                        SizedBox(width: 12),
+                                        Expanded(
+                                          child: _FeatureCard(
+                                            icon: Icons
+                                                .account_balance_wallet_outlined,
+                                            title: 'Finanzas Ordenadas',
+                                            subtitle:
+                                                'Controla caja diaria, ventas, gastos y cuentas por cobrar o pagar.',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Row(
+                                      children: [
+                                        Expanded(
+                                          child: _FeatureCard(
+                                            icon: Icons.verified_user_outlined,
+                                            title: 'Acceso al Crédito',
+                                            subtitle:
+                                                'Genera constancias verificables e indicadores reales de capacidad de pago.',
+                                          ),
+                                        ),
+                                        SizedBox(width: 12),
+                                        Expanded(
+                                          child: _FeatureCard(
+                                            icon: Icons.psychology_outlined,
+                                            title: 'Consultas Simples',
+                                            subtitle:
+                                                'Pregunta cómo va tu negocio en lenguaje natural y sin tecnicismos.',
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 24),
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.06),
+                                        borderRadius: BorderRadius.circular(18),
+                                        border: Border.all(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.14)),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          Wrap(
+                                            alignment: WrapAlignment.center,
+                                            spacing: 12,
+                                            runSpacing: 10,
+                                            children: [
+                                              FilledButton.icon(
+                                                style: FilledButton.styleFrom(
+                                                  backgroundColor:
+                                                      const Color(0xFF09AFDC),
+                                                  foregroundColor: Colors.white,
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 18,
+                                                      vertical: 13),
+                                                ),
+                                                onPressed: () => setState(
+                                                    () => _phoneFrame = false),
+                                                icon: const Icon(
+                                                    Icons.fullscreen_rounded,
+                                                    size: 19),
+                                                label: const Text(
+                                                    'Expandir pantalla completa'),
+                                              ),
+                                              OutlinedButton.icon(
+                                                style: OutlinedButton.styleFrom(
+                                                  foregroundColor: Colors.white,
+                                                  side: BorderSide(
+                                                      color: Colors.white
+                                                          .withValues(
+                                                              alpha: 0.35)),
+                                                  backgroundColor: Colors.white
+                                                      .withValues(alpha: 0.08),
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 18,
+                                                      vertical: 13),
+                                                ),
+                                                onPressed: () => setState(() =>
+                                                    _showMobileModal = true),
+                                                icon: const Icon(
+                                                    Icons.qr_code_2_rounded,
+                                                    color: Color(0xFF38BDF8),
+                                                    size: 19),
+                                                label: const Text(
+                                                    'Abrir en celular'),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              const Icon(
+                                                  Icons.touch_app_rounded,
+                                                  color: Color(0xFF4ADE80),
+                                                  size: 17),
+                                              const SizedBox(width: 8),
+                                              Flexible(
+                                                child: Text(
+                                                  'Interactúa en vivo con el teléfono a la derecha',
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                    color: Colors.white
+                                                        .withValues(alpha: 0.9),
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 16),
-                                const Text(
-                                  'FINKI',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 44,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: -1.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 36),
+                        Expanded(
+                          flex: 9,
+                          child: Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: _PhoneMockup(
+                                child: MediaQuery(
+                                  data: mq.copyWith(
+                                    size: const Size(390, 780),
+                                    padding: const EdgeInsets.only(
+                                        top: 8, bottom: 8),
+                                    viewPadding: const EdgeInsets.only(
+                                        top: 8, bottom: 8),
                                   ),
+                                  child: SizedBox(
+                                    width: 390,
+                                    height: 780,
+                                    child: widget.child,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (_showMobileModal)
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () => setState(() => _showMobileModal = false),
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.65),
+                    alignment: Alignment.center,
+                    padding: const EdgeInsets.all(24),
+                    child: GestureDetector(
+                      onTap: () {},
+                      child: Container(
+                        width: 420,
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black38,
+                              blurRadius: 32,
+                              offset: Offset(0, 12),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Row(
+                                  children: [
+                                    Icon(Icons.smartphone_rounded,
+                                        color: AppTheme.brandBlue, size: 22),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Probar FINKI en tu celular',
+                                      style: TextStyle(
+                                        color: AppTheme.navy,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                IconButton(
+                                  onPressed: () =>
+                                      setState(() => _showMobileModal = false),
+                                  icon: const Icon(Icons.close_rounded,
+                                      color: AppTheme.textMuted),
                                 ),
                               ],
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Escanea el código QR con la cámara de tu teléfono o copia el enlace directo para abrir la aplicación en pantalla móvil completa.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppTheme.textMuted,
+                                fontSize: 13.5,
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: AppTheme.canvas,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: AppTheme.borderBlue),
+                              ),
+                              child: Image.network(
+                                'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://hackathon2026-pinguinos.onrender.com',
+                                width: 190,
+                                height: 190,
+                                errorBuilder: (_, __, ___) => const SizedBox(
+                                  width: 190,
+                                  height: 190,
+                                  child: Center(
+                                    child: Icon(Icons.qr_code_2_rounded,
+                                        size: 96, color: AppTheme.brandBlue),
+                                  ),
+                                ),
+                              ),
                             ),
                             const SizedBox(height: 16),
-                            const Text(
-                              'Las finanzas de tu negocio,\nclaras y al día.',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 34,
-                                height: 1.15,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.6,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: AppTheme.canvas,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppTheme.borderBlue),
+                              ),
+                              child: const SelectableText(
+                                _publicUrl,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: AppTheme.navy,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 14),
-                            Text(
-                              'Copiloto financiero móvil para emprendedores y MYPES. Registra ventas, compras, gastos, cobros y pagos en segundos, evalúa la salud de tu negocio y registra evidencias con IA.',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.82),
-                                fontSize: 15.5,
-                                height: 1.5,
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: _copyLink,
+                                icon: Icon(
+                                    _copied
+                                        ? Icons.check_rounded
+                                        : Icons.copy_rounded,
+                                    size: 18),
+                                label: Text(_copied
+                                    ? 'Enlace copiado al portapapeles'
+                                    : 'Copiar enlace para celular'),
                               ),
-                            ),
-                            const SizedBox(height: 26),
-                            const Wrap(
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: [
-                                _FeatureCard(
-                                  icon: Icons.point_of_sale_rounded,
-                                  title: 'Caja y Operaciones',
-                                  subtitle:
-                                      'Ventas, gastos, cobros y transferencias al instante.',
-                                ),
-                                _FeatureCard(
-                                  icon: Icons.people_alt_rounded,
-                                  title: 'Por Cobrar y Pagar',
-                                  subtitle:
-                                      'Control de saldos pendientes con clientes y proveedores.',
-                                ),
-                                _FeatureCard(
-                                  icon: Icons.psychology_rounded,
-                                  title: 'Copiloto con IA',
-                                  subtitle:
-                                      'Consultas inteligentes, captura por voz y evidencias.',
-                                ),
-                                _FeatureCard(
-                                  icon: Icons.verified_rounded,
-                                  title: 'Salud y Constancias',
-                                  subtitle:
-                                      'Indicadores clave y reportes verificables del negocio.',
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 28),
-                            Wrap(
-                              spacing: 14,
-                              runSpacing: 10,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                FilledButton.icon(
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: const Color(0xFF09AFDC),
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 20, vertical: 14),
-                                  ),
-                                  onPressed: () =>
-                                      setState(() => _phoneFrame = false),
-                                  icon: const Icon(Icons.fullscreen_rounded,
-                                      size: 20),
-                                  label: const Text('Expandir pantalla completa'),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 14, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.08),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                        color: Colors.white
-                                            .withValues(alpha: 0.16)),
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.touch_app_rounded,
-                                          color: Color(0xFF4ADE80), size: 18),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Interactúa en vivo con el teléfono a la derecha 👉',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(width: 36),
-                    Expanded(
-                      flex: 9,
-                      child: Center(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: _PhoneMockup(
-                            child: MediaQuery(
-                              data: mq.copyWith(
-                                size: const Size(390, 780),
-                                padding:
-                                    const EdgeInsets.only(top: 8, bottom: 8),
-                                viewPadding:
-                                    const EdgeInsets.only(top: 8, bottom: 8),
-                              ),
-                              child: SizedBox(
-                                width: 390,
-                                height: 780,
-                                child: widget.child,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -362,7 +593,7 @@ class _FeatureCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 240,
+      height: 112,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.08),
@@ -372,23 +603,35 @@ class _FeatureCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: const Color(0xFF38BDF8), size: 22),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-            ),
+          Row(
+            children: [
+              Icon(icon, color: const Color(0xFF38BDF8), size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.74),
-              fontSize: 12.5,
-              height: 1.35,
+          const SizedBox(height: 6),
+          Expanded(
+            child: Text(
+              subtitle,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.78),
+                fontSize: 12.5,
+                height: 1.35,
+              ),
             ),
           ),
         ],
