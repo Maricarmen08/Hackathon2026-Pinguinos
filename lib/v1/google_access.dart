@@ -47,8 +47,9 @@ class _GoogleAccessState extends State<GoogleAccess> {
     try {
       await (GoogleAccess.initialization ??= GoogleSignIn.instance.initialize(
           clientId: kIsWeb ? GoogleAccess.webId : null,
-          serverClientId:
-              GoogleAccess.serverId.isEmpty ? null : GoogleAccess.serverId,
+          serverClientId: kIsWeb || GoogleAccess.serverId.isEmpty
+              ? null
+              : GoogleAccess.serverId,
           nonce: GoogleAccess.nonce));
       if (!mounted) return;
       if (kIsWeb) {
