@@ -230,6 +230,9 @@ PublishScripts/
 **/[Pp]ackages/*
 # except build/, which is used as an MSBuild target.
 !**/[Pp]ackages/build/
+# FINKI: la web compilada necesita sus archivos de plugins (por ejemplo record.worklet.js).
+!backend/web_build/assets/packages/
+!backend/web_build/assets/packages/**
 # Uncomment if necessary however generally it will be regenerated when needed
 #!**/[Pp]ackages/repositories.config
 # NuGet v3's project.json files produces more ignorable files

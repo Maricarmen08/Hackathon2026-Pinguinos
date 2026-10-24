@@ -6,7 +6,7 @@ const {properties,validateProposal}=require('./ai-provider');
 const MODEL='gemini-3.5-flash-lite';
 // Reserve attempts before sending. Restarts preserve the daily ceiling; no retries.
 class DailyBudget {
-  constructor(filename,limit=20,clock=Date.now){this.filename=filename;this.limit=limit;this.clock=clock;this.recent=[];}
+  constructor(filename,limit=20,clock=Date.now,perMinute=2){this.filename=filename;this.limit=limit;this.clock=clock;this.perMinute=perMinute;this.recent=[];}
   availability(){
     const now=this.clock(),day=new Date(now).toISOString().slice(0,10);
     try{
@@ -14,14 +14,14 @@ class DailyBudget {
       if(state&&(!Number.isSafeInteger(state.count)||state.count<0||typeof state.day!=='string'))throw Error('budget');
       if(state?.day===day&&state.count>=this.limit)return {disponible:false,motivo:'DAILY_LIMIT',reintentar_en:new Date(Date.parse(day+'T00:00:00Z')+86400000).toISOString()};
       const recent=this.recent.filter(t=>now-t<60000);
-      if(recent.length>=2)return {disponible:false,motivo:'MINUTE_LIMIT',reintentar_en:new Date(recent[0]+60000).toISOString()};
+      if(recent.length>=this.perMinute)return {disponible:false,motivo:'MINUTE_LIMIT',reintentar_en:new Date(recent[0]+60000).toISOString()};
       return {disponible:true,reintentar_en:null};
     }catch{fail(503,'AI_BUDGET_UNAVAILABLE','No se pudo comprobar el presupuesto.');}
   }
   reserve(){
     const now=this.clock(),day=new Date(now).toISOString().slice(0,10);
     this.recent=this.recent.filter(t=>now-t<60000);
-    if(this.recent.length>=2)fail(503,'AI_QUOTA_EXHAUSTED','Espera un minuto o registra manualmente.');
+    if(this.recent.length>=this.perMinute)fail(503,'AI_QUOTA_EXHAUSTED','Espera un minuto o registra manualmente.');
     try{
       let state={day,count:0};
       if(fs.existsSync(this.filename)){
@@ -47,7 +47,7 @@ class GeminiProvider {
   }
   constructor(config,transport=fetch,budget,circuit){
     this.config=config;this.transport=transport;this.name='Gemini';this.model=config.GEMINI_MODEL||MODEL;this.busy=false;
-    this.budget=budget||new DailyBudget(path.resolve(process.env.FINKI_PRIVATE_DIR||path.join(__dirname,'../../private'),'gemini-budget.json'),config.AI_MAX_REQUESTS_PER_DAY||20);
+    this.budget=budget||new DailyBudget(path.resolve(process.env.FINKI_PRIVATE_DIR||path.join(__dirname,'../../private'),'gemini-budget.json'),config.AI_MAX_REQUESTS_PER_DAY||20,Date.now,config.AI_MAX_REQUESTS_PER_MINUTE||10);
     this.circuit=circuit||new (require('./provider-circuit').ProviderCircuit)(path.resolve(process.env.FINKI_PRIVATE_DIR||path.join(__dirname,'../../private'),'gemini-circuit.json'));
   }
   get enabled(){return this.config.AI_ENABLED===true&&Boolean(this.config.GEMINI_API_KEY?.trim())&&this.model===MODEL;}

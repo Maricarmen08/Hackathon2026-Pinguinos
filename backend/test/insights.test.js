@@ -13,8 +13,8 @@ test('resumen por bloques conserva importes, periodo y separación financiera',(
  assert.equal(r.desde,'2026-10-19');assert.equal(r.hasta,'2026-10-23');
  for(const line of ['• Vendiste: S/ 100.00','• Gastaste: S/ 23.00','• Compraste mercadería: S/ 80.00','• Te deben: S/ 110.00','• Debes: S/ 103.00'])assert.ok(r.respuesta.split('\n').includes(line),line);
  assert.match(r.respuesta,/Ventas menos gastos y compras: -S\/ 3.00/);
- assert.match(r.respuesta,/Las compras y los gastos superan a las ventas/);
- assert.match(r.respuesta,/No es tu ganancia exacta ni el dinero que tienes ahora/);
+ assert.match(r.respuesta,/Gastaste más de lo que vendiste/);
+ assert.match(r.respuesta,/No es tu ganancia exacta/);
  assert.equal(r.indicadores.resultado_operativo_simplificado_minor,'-300');
  const empty=answer(b,[[],[],[],[],[]],'resumen semanal',[],[],'2026-10-23');
  assert.match(empty.respuesta,/pocos registros/);assert.equal(empty.indicadores.ventas_minor,'0');
@@ -24,9 +24,9 @@ for(const q of ['Dime mis ventas de esta semana','Mis ventas hoy','¿Cuánto he 
 test('cobros semanales no recibe resumen de ventas, abono no duplica venta',()=>{const r=ask('Cuánto dinero cobré esta semana');assert.match(r.respuesta,/Cobraste S\/ 40.00/);assert.equal(r.indicadores.por_cobrar_minor,'11000');assert.equal(r.indicadores.ventas_minor,'10000');});
 test('deudores agrupa saldo tras abonos y conserva deudas anteriores',()=>{const r=ask('¿Quién me debe más?');assert.equal(r.deudores[0].nombre,'Cliente Prueba');assert.equal(r.deudores[0].pendiente_minor,'11000');assert.equal(ask('Cuánto debo pagar').indicadores.por_pagar_minor,'10300');});
 test('gastos, compras, pagos y transferencias diferenciados',()=>{assert.match(ask('Cuánto he gastado en mercadería').respuesta,/mercadería por S\/ 80.00/);assert.match(ask('Cuánto pagué hoy').respuesta,/Pagaste S\/ 0.00/);assert.match(ask('Movimientos de dinero hoy').respuesta,/Entró S\/ 40.00/);assert.match(ask('En qué gasto más').respuesta,/Servicios/);});
-test('comparación parcial y evolución con cobertura explícita',()=>{const r=ask('¿Vendí más que el mes pasado?');assert.equal(r.indicadores.ventas_minor,'10000');assert.equal(r.comparacion.ventas_minor,'5000');assert.match(r.respuesta,/todavía no termina/);assert.ok(ask('Evolución de mi negocio esta semana').comparacion);});
+test('comparación parcial y evolución con cobertura explícita',()=>{const r=ask('¿Vendí más que el mes pasado?');assert.equal(r.indicadores.ventas_minor,'10000');assert.equal(r.comparacion.ventas_minor,'5000');assert.match(r.respuesta,/50\.00 más/);assert.ok(ask('Evolución de mi negocio esta semana').comparacion);});
 test('fechas calendario y rangos no inventados',()=>{assert.deepEqual(period('ayer','2026-10-23'),['2026-10-22','2026-10-22']);assert.deepEqual(period('semana pasada','2026-10-23'),['2026-10-12','2026-10-18']);assert.deepEqual(period('del 01/09/2026 al 23/10/2026','2026-10-23'),['2026-09-01','2026-10-23']);for(const q of ['ventas 31/02/2026','ventas 2027-01-01','ventas 23/10/2026 al 01/10/2026','ventas enero'])assert.throws(()=>ask(q));});
-test('sin movimientos no fabrica causas ni recomendaciones',()=>{const r=answer(b,[[],[],[],[],[]],'Cómo va mi negocio',[],[],'2026-10-23');assert.equal(r.datos_suficientes,false);assert.match(r.respuesta,/pocos registros/);assert.match(ask('¿Por qué gasto más de lo que vendo?').respuesta,/superan a las ventas/);});
+test('sin movimientos no fabrica causas ni recomendaciones',()=>{const r=answer(b,[[],[],[],[],[]],'Cómo va mi negocio',[],[],'2026-10-23');assert.equal(r.datos_suficientes,false);assert.match(r.respuesta,/pocos registros/);assert.match(ask('¿Por qué gasto más de lo que vendo?').respuesta,/Gastaste más de lo que vendiste/);});
 test('sin proveedor ni cuota: respuestas deterministas y límites',()=>{for(const q of ['DROP TABLE usuarios','¿Qué clima hace?','¿Cuánto venderé mañana?','Dime mi contraseña'])assert.throws(()=>ask(q));assert.equal(ask('Ventas hoy').fuente,'REGISTROS');assert.equal(ask('Qué producto vendí más').datos_suficientes,false);});
 const {askAssistant}=require('../src/services/insights-assistant');
 test('resumen con ayuda externa conserva bloques y cifras deterministas',async()=>{

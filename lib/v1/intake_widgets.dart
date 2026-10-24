@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
 import '../ui/widgets/finki_components.dart';
@@ -328,7 +329,9 @@ class IntakeCapture extends StatelessWidget {
         const SizedBox(height: 10),
         Text(
             analyzingImage
-                ? 'Analizando imagen en tu celular…'
+                ? (kIsWeb
+                    ? 'Leyendo la imagen…'
+                    : 'Analizando imagen en tu celular…')
                 : preparingVoice
                     ? 'Preparando el micrófono…'
                     : transcribingVoice
