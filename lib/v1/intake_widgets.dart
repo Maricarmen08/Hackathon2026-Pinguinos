@@ -150,35 +150,67 @@ class IntakeCapture extends StatelessWidget {
       const Text('Cuéntame qué vendiste o gastaste',
           style: TextStyle(color: AppTheme.textMuted)),
       const SizedBox(height: 20),
-      Card(
-          margin: EdgeInsets.zero,
-          child: Padding(
-              padding: const EdgeInsets.fromLTRB(4, 8, 12, 8),
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CheckboxListTile(
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 8),
-                        controlAffinity: ListTileControlAffinity.leading,
-                        subtitle: const Text(
-                            'Solo se envía contenido si eliges ayuda por internet.'),
-                        value: consent,
-                        onChanged: busy || recording || picking
-                            ? null
-                            : (v) => onConsent(v == true),
-                        title: const Text(
-                            'Acepto enviar mi voz, texto o imagen a un servicio de IA externo para preparar una propuesta.',
-                            style: TextStyle(fontSize: 14, height: 1.4))),
-                    Padding(
-                        padding: const EdgeInsets.only(left: 12),
-                        child: TextButton.icon(
-                            onPressed: () =>
-                                showIntakePrivacy(context, provider),
-                            icon: const Icon(Icons.privacy_tip_outlined,
-                                size: 18),
-                            label: const Text('Cómo se usan mis datos'))),
-                  ]))),
+      if (!recording) ...[
+        FilledButton.icon(
+            onPressed: ready ? onVoice : null,
+            style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(76),
+                textStyle:
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            icon: const Icon(Icons.mic_none_rounded, size: 32),
+            label: const Text('Hablar')),
+        const SizedBox(height: 10),
+        Text(
+            'Toca y dime, por ejemplo: «Vendí 50 $currencyWord de arroz» o «Gasté 20 $currencyWord en pasajes».',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                color: AppTheme.textMuted, fontSize: 14, height: 1.4)),
+        const SizedBox(height: 20),
+      ],
+      // El permiso solo se pide si la ayuda por internet existe, y una sola vez.
+      if (configured == true && !consent)
+        Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+                padding: const EdgeInsets.fromLTRB(4, 8, 12, 8),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CheckboxListTile(
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 8),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          subtitle: const Text(
+                              'Solo se envía contenido si eliges ayuda por internet.'),
+                          value: consent,
+                          onChanged: busy || recording || picking
+                              ? null
+                              : (v) => onConsent(v == true),
+                          title: const Text(
+                              'Acepto enviar mi voz, texto o imagen a un servicio de IA externo para preparar una propuesta.',
+                              style: TextStyle(fontSize: 14, height: 1.4))),
+                      Padding(
+                          padding: const EdgeInsets.only(left: 12),
+                          child: TextButton.icon(
+                              onPressed: () =>
+                                  showIntakePrivacy(context, provider),
+                              icon: const Icon(Icons.privacy_tip_outlined,
+                                  size: 18),
+                              label: const Text('Cómo se usan mis datos'))),
+                    ]))),
+        if (configured == true && consent)
+        Row(children: [
+          const Icon(Icons.check_circle_outline,
+              size: 18, color: AppTheme.success),
+          const SizedBox(width: 8),
+          const Expanded(
+              child: Text('Ayuda por internet activada.',
+                  style: TextStyle(fontSize: 14))),
+          TextButton(
+              onPressed:
+                  busy || recording || picking ? null : () => onConsent(false),
+              child: const Text('Quitar permiso')),
+        ]),
       const SizedBox(height: 16),
       if (needsHelp && configured != true) ...[
         const FinkiNotice(
@@ -209,11 +241,6 @@ class IntakeCapture extends StatelessWidget {
                   onPressed: onCancel, child: const Text('Cancelar grabación')),
             ])),
       ] else ...[
-        FilledButton.icon(
-            onPressed: ready ? onVoice : null,
-            icon: const Icon(Icons.mic_none_rounded),
-            label: const Text('Hablar')),
-        const SizedBox(height: 12),
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Expanded(
               child: OutlinedButton.icon(
@@ -242,7 +269,7 @@ class IntakeCapture extends StatelessWidget {
                     : transcript
                         ? 'Esto escuché · puedes corregirlo'
                         : 'O escríbelo aquí…',
-                hintText: 'Vendí 50 soles de arroz',
+                hintText: 'Vendí 50 $currencyWord de arroz',
                 counterText: '')),
         if (imageText)
           Align(
@@ -346,6 +373,11 @@ class IntakeProposalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = intakeTypes[proposal['intencion']], ambiguous = type == null;
+    final tone = switch (proposal['intencion']) {
+      'VENTA' || 'COBRO' => AppTheme.success,
+      'GASTO_OPERATIVO' || 'COMPRA_MERCADERIA' || 'PAGO' => AppTheme.expenseRed,
+      _ => AppTheme.navy
+    };
     return Card(
         margin: EdgeInsets.zero,
         child: Padding(
@@ -360,13 +392,13 @@ class IntakeProposalCard extends StatelessWidget {
                   const SizedBox(height: 14),
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Icon(type?.$3 ?? Icons.help_outline_rounded,
-                        color: AppTheme.brandBlue),
+                        color: ambiguous ? AppTheme.warning : tone),
                     const SizedBox(width: 12),
                     Expanded(
                         child: Text(
                             proposal['concepto']?.toString() ??
                                 (ambiguous
-                                    ? 'Registro por completar'
+                                    ? 'Necesito tu ayuda con este registro'
                                     : type.$1),
                             style: Theme.of(context).textTheme.titleLarge)),
                   ]),
@@ -382,12 +414,14 @@ class IntakeProposalCard extends StatelessWidget {
                   ],
                   Text(
                       proposal['monto_minor'] == null
-                          ? 'Importe por completar'
+                          ? 'Falta el monto'
                           : soles(proposal['monto_minor']),
-                      style: const TextStyle(
-                          fontSize: 30,
+                      style: TextStyle(
+                          fontSize: 36,
                           fontWeight: FontWeight.w800,
-                          color: AppTheme.navy)),
+                          color: proposal['monto_minor'] == null
+                              ? AppTheme.warning
+                              : tone)),
                   if (receipt != null && receipt!.items.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     for (final item in receipt!.items)
@@ -415,8 +449,8 @@ class IntakeProposalCard extends StatelessWidget {
                   const SizedBox(height: 14),
                   Text(
                       ambiguous
-                          ? '¿Fue una venta, un gasto u otro registro?'
-                          : 'Operación sugerida: ${type.$1}',
+                          ? '¿Fue una venta, un gasto o una compra?'
+                          : 'Entendí que es: ${type.$1}',
                       style: const TextStyle(fontWeight: FontWeight.w600)),
                   if (proposal['es_pago'] == true) ...[
                     const SizedBox(height: 12),

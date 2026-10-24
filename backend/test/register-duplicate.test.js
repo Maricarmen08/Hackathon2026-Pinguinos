@@ -1,0 +1,20 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const {randomBytes}=require('node:crypto');
+const {once}=require('node:events');
+const {createApp}=require('../src/app');
+const {MemoryDatabase}=require('./memory');
+test('registrar un celular repetido explica qué hacer',async t=>{
+  const app=createApp({db:new MemoryDatabase(),config:{JWT_SECRET:randomBytes(48).toString('hex'),JWT_REFRESH_SECRET:randomBytes(48).toString('hex'),CORS_ORIGINS:'https://permitido.example.invalid'}});
+  const server=app.listen(0,'127.0.0.1');await once(server,'listening');
+  t.after(()=>new Promise(resolve=>server.close(resolve)));
+  const base='http://127.0.0.1:'+server.address().port+'/api/v1';
+  const body=JSON.stringify({nombre:'Rosa',telefono:'987654321',clave:'clave-de-prueba-123',dispositivo:{nombre:'Prueba',plataforma:'WEB'}});
+  const send=()=>fetch(base+'/auth/registro',{method:'POST',headers:{'Content-Type':'application/json'},body});
+  assert.equal((await send()).status,201);
+  const again=await send();
+  assert.equal(again.status,409);
+  const json=await again.json();
+  assert.equal(json.error.code,'PHONE_TAKEN');
+  assert.match(json.error.message,/Ya tengo cuenta/);
+});

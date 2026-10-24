@@ -78,6 +78,7 @@ class _IntakePageState extends State<IntakePage> {
   void initState() {
     super.initState();
     status();
+    loadConsent();
     restoreProposals();
     speechCapabilities = localSpeech.capabilities();
     speechCapabilities.then((c) {
@@ -89,6 +90,36 @@ class _IntakePageState extends State<IntakePage> {
         });
       }
     });
+  }
+
+  // El permiso de IA se pide una sola vez por usuario y se recuerda. Si cambia
+  // la versión del aviso de privacidad, se vuelve a pedir.
+  static const consentVersion = 'finki-v4-2026-10-22';
+  String get consentKey => 'ai-consent-v1:${widget.api.userId}';
+  Future<void> loadConsent() async {
+    try {
+      if (widget.api.userId == null) return;
+      final saved = await widget.api.store.read(consentKey);
+      if (mounted && saved == consentVersion) setState(() => consent = true);
+    } catch (_) {/* sin permiso guardado se vuelve a preguntar */}
+  }
+
+  Future<void> setConsent(bool value) async {
+    setState(() => consent = value);
+    try {
+      if (widget.api.userId != null) {
+        await widget.api.store.write(consentKey, value ? consentVersion : null);
+      }
+    } catch (_) {/* el permiso sigue activo en esta pantalla */}
+  }
+
+  /// Renglones que se muestran bajo el importe: boleta o lista dictada.
+  ReceiptDetails? receiptFor(String visible) {
+    final receipt = ReceiptDetails.parse(visible);
+    if (receipt.items.isNotEmpty) return receipt;
+    final list = parseMoneyList(visible);
+    if (list.length >= 2) return ReceiptDetails(null, null, list);
+    return source == 'IMAGEN' ? receipt : null;
   }
 
   Future<void> restoreProposals() async {
@@ -304,7 +335,6 @@ class _IntakePageState extends State<IntakePage> {
             source = 'VOZ';
             proposal = rules.reconcileVoice(text.text, proposal!);
           }
-          consent = false;
         });
         // The external proposal replaces this local draft, rather than leaving
         // two independently confirmable versions of the same input.
@@ -935,8 +965,7 @@ class _IntakePageState extends State<IntakePage> {
                                     provider: providerName,
                                     error: error,
                                     transcript: transcript,
-                                    onConsent: (v) =>
-                                        setState(() => consent = v),
+                                    onConsent: setConsent,
                                     onVoice: voice,
                                     onCancel: cancelVoice,
                                     onCamera: () => photo(ImageSource.camera),
@@ -963,12 +992,10 @@ class _IntakePageState extends State<IntakePage> {
                                   IntakeProposalCard(
                                       key: proposalKey,
                                       proposal: proposal!,
-                                      receipt: source == 'IMAGEN'
-                                          ? ReceiptDetails.parse(
-                                              proposal!['texto_visible']
-                                                      as String? ??
-                                                  '')
-                                          : null,
+                                      receipt: receiptFor(
+                                          proposal!['texto_visible']
+                                                  as String? ??
+                                              ''),
                                       enabled: !busy && !recording && !picking,
                                       hasEvidence: hasEvidence,
                                       onReview: () => intakeTypes.containsKey(

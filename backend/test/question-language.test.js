@@ -16,14 +16,14 @@ for(const q of ['Ventas de hoy','Quiero que me des mis ventas de hoy','Oye Finki
  const r=ask(q);assert.equal(r.indicadores.ventas_minor,'10000');assert.equal(r.desde,'2026-10-23');assert.equal(r.hasta,r.desde);
 });
 for(const q of ['Dime cuánto he gastado esta semana','cuanto gastee esta semana','quiero saber mis GASTOZ esta semana'])test('gastos equivalentes: '+q,()=>{
- const r=ask(q);assert.equal(r.indicadores.gastos_minor,'2000');assert.match(r.respuesta,/gastos operativos/);assert.equal(r.desde,'2026-10-19');
+ const r=ask(q);assert.equal(r.indicadores.gastos_minor,'2000');assert.match(r.respuesta,/Gastaste/);assert.equal(r.desde,'2026-10-19');
 });
 test('lenguaje peruano separa deudas, cobros, compras y resumen',()=>{
  assert.equal(ask('Quién me debe plata').deudores[0].pendiente_minor,'10000');
- assert.match(ask('Cuánto debo a mis proveedores').respuesta,/S\/ 90.00 por pagar/);
- assert.match(ask('Cuánto he cobrado este mes').respuesta,/cobros de ventas S\/ 50.00/);
- assert.match(ask('Cuánto compré en mercadería').respuesta,/compras de mercadería S\/ 70.00/);
- const summary=ask('Qué tal me fue esta semana');assert.match(summary.respuesta,/Resumen de tu negocio/);assert.equal(summary.indicadores.ventas_minor,'15000');
+ assert.match(ask('Cuánto debo a mis proveedores').respuesta,/Debes pagar S\/ 90.00/);
+ assert.match(ask('Cuánto he cobrado este mes').respuesta,/Cobraste S\/ 50.00/);
+ assert.match(ask('Cuánto compré en mercadería').respuesta,/mercadería por S\/ 70.00/);
+ const summary=ask('Qué tal me fue esta semana');assert.match(summary.respuesta,/Así va tu negocio/);assert.equal(summary.indicadores.ventas_minor,'15000');
  const largest=ask('Cuál fue mi gasto más grande');assert.equal(largest.gasto_mayor.id,'light');assert.match(largest.respuesta,/S\/ 12.00/);
 });
 for(const q of ['¿Cuánta plata hice hoy?','A ver cuánto hice ayer','Muéstrame mis cuentas del mes'])test('aclaración sin inventar ni consultar proveedor: '+q,async()=>{
@@ -33,7 +33,7 @@ for(const q of ['¿Cuánta plata hice hoy?','A ver cuánto hice ayer','Muéstram
  if(q.includes('ayer'))assert.equal(selected.indicadores.ventas_minor,'5000');
 });
 test('ganancia no se presenta como utilidad real; información no registrada y periodos inválidos',()=>{
- assert.match(ask('Cuál es mi ganancia hoy').respuesta,/No es utilidad contable/);
+ assert.match(ask('Cuál es mi ganancia hoy').respuesta,/No es tu ganancia exacta/);
  assert.equal(ask('Qué producto vendí más').datos_suficientes,false);
  for(const q of ['Qué clima hace','ventas hoy y ayer','ventas 31/02/2026','cuánta plata hice mañana'])assert.throws(()=>ask(q));
 });

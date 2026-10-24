@@ -201,13 +201,17 @@ class _AuthPageState extends State<AuthPage> {
                       controller: user,
                       decoration: InputDecoration(
                           labelText: register
-                              ? 'Celular peruano'
+                              ? 'Celular'
                               : 'Teléfono o correo electrónico',
+                          helperText: register
+                              ? 'Perú: 987654321. Otro país: con código, ej. +573001234567'
+                              : null,
+                          helperMaxLines: 2,
                           prefixIcon:
                               const Icon(Icons.alternate_email_rounded)),
                       keyboardType: register
                           ? TextInputType.phone
-                          : TextInputType.emailAddress,
+                          : TextInputType.text,
                       validator: (v) => v!.trim().isEmpty
                           ? 'Completa este campo'
                           : register &&
@@ -384,7 +388,15 @@ class _BusinessHomeState extends State<BusinessHome>
       people = [],
       history = [],
       pending = [];
-  Json? business, report, profile;
+  Json? report, profile;
+  Json? _business;
+  Json? get business => _business;
+  // Al cambiar de negocio se actualiza la moneda que muestran todos los montos.
+  set business(Json? value) {
+    _business = value;
+    useBusinessCurrency(value);
+  }
+
   DailySales? dailySales;
   bool dailyCached = false;
   Timer? dailyTimer;
@@ -603,6 +615,103 @@ class _BusinessHomeState extends State<BusinessHome>
                     Expanded(child: children[1])
                   ]));
       });
+  Future<void> openAssistant() async {
+    if (business == null) return;
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
+        builder: (_) => IntakePage(
+            api: api,
+            business: business!,
+            accounts: accounts,
+            categories: categories,
+            people: people)));
+    if (saved == true && mounted) await load();
+  }
+
+  /// Acción principal de la app: una tarjeta grande y fácil de tocar.
+  Widget get assistantCard => Material(
+      color: AppTheme.primary,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: openAssistant,
+          child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(children: [
+                Container(
+                    width: 64,
+                    height: 64,
+                    decoration: const BoxDecoration(
+                        color: Colors.white, shape: BoxShape.circle),
+                    child: const Icon(Icons.mic_rounded,
+                        color: AppTheme.primary, size: 36)),
+                const SizedBox(width: 16),
+                const Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('Hablar con Finki',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800)),
+                      SizedBox(height: 4),
+                      Text('Toca aquí y cuéntame qué vendiste o gastaste',
+                          style: TextStyle(
+                              color: AppTheme.onBrandMuted,
+                              fontSize: 15,
+                              height: 1.35)),
+                    ])),
+                const Icon(Icons.chevron_right_rounded,
+                    color: Colors.white, size: 28),
+              ]))));
+
+  /// Botón cuadrado con icono grande, color propio y una frase corta.
+  Widget quickAction(String label, String hint, IconData icon, Color color,
+          Color tint, VoidCallback onTap, double width) =>
+      SizedBox(
+          width: width,
+          child: Material(
+              color: tint,
+              borderRadius: BorderRadius.circular(20),
+              child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: onTap,
+                  child: Container(
+                      constraints: const BoxConstraints(minHeight: 140),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 18),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(icon, color: color, size: 34),
+                            const SizedBox(height: 10),
+                            Text(label,
+                                style: TextStyle(
+                                    color: color,
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 2),
+                            Text(hint,
+                                style: const TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 13,
+                                    height: 1.3)),
+                          ])))));
+
+  /// "Efectivo · EFECTIVO" se mostraba repetido; ahora solo se agrega el tipo
+  /// cuando aporta algo (por ejemplo "Mi Yape · Yape").
+  String accountLabel(Json a) {
+    final kind = {
+          'EFECTIVO': 'Efectivo',
+          'YAPE': 'Yape',
+          'PLIN': 'Plin',
+          'BANCO': 'Banco'
+        }['${a['tipo']}'] ??
+        '${a['tipo']}';
+    final name = '${a['nombre']}';
+    return name.toLowerCase() == kind.toLowerCase() ? name : '$name · $kind';
+  }
+
   Widget get overview =>
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text(
@@ -617,7 +726,9 @@ class _BusinessHomeState extends State<BusinessHome>
         Text(business?['nombre'] ?? '',
             style:
                 const TextStyle(fontSize: 15, color: AppTheme.textSecondary)),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
+        if (writer) assistantCard,
+        if (writer) const SizedBox(height: 16),
         Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -666,103 +777,81 @@ class _BusinessHomeState extends State<BusinessHome>
                         color: AppTheme.onBrandMuted, fontSize: 12)),
               ],
             ])),
-        const SizedBox(height: 20),
-        Card(
-            child: Column(children: [
-          if (writer)
-            ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                leading: const Icon(Icons.mic_none_rounded,
-                    color: AppTheme.brandBlue, size: 30),
-                title: const Text('Hablar con Finki',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: const Text('Registra con tu voz, texto o una foto'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () async {
-                  final saved = await Navigator.of(context).push<bool>(
-                      MaterialPageRoute(
-                          builder: (_) => IntakePage(
-                              api: api,
-                              business: business!,
-                              accounts: accounts,
-                              categories: categories,
-                              people: people)));
-                  if (saved == true && mounted) await load();
-                }),
-          if (writer) const Divider(height: 1, indent: 20, endIndent: 20),
-          ListTile(
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              leading: const Icon(Icons.picture_as_pdf_outlined,
-                  color: AppTheme.brandBlue, size: 30),
-              title: const Text('Mi constancia',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
-              subtitle: const Text('Prepara un resumen de tu negocio en PDF'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) =>
-                      CertificatePage(api: api, business: business!)))),
-        ])),
-        const SizedBox(height: 12),
         const FinkiSection('¿Qué vas a registrar?'),
         if (writer)
-          LayoutBuilder(
-              builder: (context, c) =>
-                  Wrap(spacing: 12, runSpacing: 12, children: [
-                    for (final item in [
-                      (
-                        'Venta',
-                        Icons.add_rounded,
-                        () => openForm('VENTA'),
-                        FinkiButtonKind.primary
-                      ),
-                      (
-                        'Gasto',
-                        Icons.shopping_bag_outlined,
-                        () => openForm('GASTO_OPERATIVO'),
-                        FinkiButtonKind.secondary
-                      ),
-                      (
-                        'Compra',
-                        Icons.inventory_2_outlined,
-                        () => openForm('COMPRA_MERCADERIA'),
-                        FinkiButtonKind.secondary
-                      ),
-                      (
-                        'Ver fiados',
-                        Icons.people_outline,
-                        () => selectTab(2),
-                        FinkiButtonKind.secondary
-                      ),
-                    ])
-                      SizedBox(
-                          width: (c.maxWidth - 12) / 2,
-                          child: FinkiButton(
-                              label: item.$1,
-                              icon: item.$2,
-                              onPressed: item.$3,
-                              kind: item.$4)),
-                  ]))
+          LayoutBuilder(builder: (context, c) {
+            final w = (c.maxWidth - 12) / 2;
+            return Wrap(spacing: 12, runSpacing: 12, children: [
+              quickAction(
+                  'Venta',
+                  'Algo que vendí',
+                  Icons.arrow_circle_up_rounded,
+                  AppTheme.success,
+                  const Color(0xFFE3F6F3),
+                  () => openForm('VENTA'),
+                  w),
+              quickAction(
+                  'Gasto',
+                  'Luz, alquiler, pasajes',
+                  Icons.arrow_circle_down_rounded,
+                  AppTheme.expenseRed,
+                  AppTheme.softRed,
+                  () => openForm('GASTO_OPERATIVO'),
+                  w),
+              quickAction(
+                  'Compra',
+                  'Mercadería para vender',
+                  Icons.inventory_2_outlined,
+                  AppTheme.primary,
+                  AppTheme.paleBlue,
+                  () => openForm('COMPRA_MERCADERIA'),
+                  w),
+              quickAction(
+                  'Ver fiados',
+                  'Quién me debe',
+                  Icons.people_outline,
+                  AppTheme.warning,
+                  AppTheme.warningSurface,
+                  () => selectTab(2),
+                  w),
+            ]);
+          })
         else
           const FinkiNotice('Tu acceso permite consultar este negocio.'),
-        const FinkiSection('Dinero que se movió',
-            subtitle: 'Cobros y pagos efectivamente registrados.'),
-        metricPair('Cobros de ventas', 'cobros_ventas_minor',
-            'Pagos operativos', 'pagos_operativos_minor'),
-        metricPair('Clientes te deben', 'por_cobrar_minor', 'Debes pagar',
+        FinkiSection('Actividad reciente',
+            action: TextButton(
+                onPressed: () => selectTab(1), child: const Text('Ver todo'))),
+        if (history.isEmpty)
+          FinkiEmpty(
+              title: 'Aquí empieza tu historia',
+              message:
+                  'Tus ventas, compras y gastos aparecerán cuando los registres.',
+              action: writer
+                  ? FinkiButton(
+                      label: 'Registrar mi primera venta',
+                      onPressed: () => openForm('VENTA'))
+                  : null),
+        ...history.take(3).map(operationRow),
+        const FinkiSection('Lo que me deben y lo que debo',
+            subtitle: 'Ventas fiadas y pagos pendientes.'),
+        metricPair('Me deben', 'por_cobrar_minor', 'Debo pagar',
             'por_pagar_minor'),
+        const FinkiSection('Dinero que entró y salió',
+            subtitle: 'Lo que ya cobraste y lo que ya pagaste.'),
+        metricPair('Cobrado por ventas', 'cobros_ventas_minor',
+            'Pagado en gastos', 'pagos_operativos_minor'),
         const FinkiSection('Mi dinero',
-            subtitle: 'Saldo registrado en cada cuenta.'),
-        if (accounts.isEmpty)
-          const FinkiNotice('Crea una cuenta para registrar cobros o pagos.'),
+            subtitle: 'Cuánto tienes en cada cuenta.'),
+        if (accounts.isEmpty && owner)
+          const FinkiNotice(
+              'Tu cuenta de Efectivo se crea sola la primera vez que cobres o pagues.'),
         ...accounts.map((a) => FinkiMoneyCard(
-            label: '${a['nombre']} · ${a['tipo']}',
+            label: accountLabel(a),
             value: soles(a['saldo_registrado_minor']),
             icon: Icons.account_balance_wallet_outlined)),
         if (writer)
           const FinkiSection('Herramientas del negocio',
-              subtitle: 'Organiza tus cuentas, categorías y contactos.'),
+              subtitle: 'Opcional: cuentas, categorías y contactos.'),
         if (writer)
           LayoutBuilder(
               builder: (context, constraints) =>
@@ -791,20 +880,20 @@ class _BusinessHomeState extends State<BusinessHome>
                             icon: Icons.person_add_alt,
                             label: 'Cliente o proveedor')),
                   ])),
-        FinkiSection('Actividad reciente',
-            action: TextButton(
-                onPressed: () => selectTab(1), child: const Text('Ver todo'))),
-        if (history.isEmpty)
-          FinkiEmpty(
-              title: 'Aquí empieza tu historia',
-              message:
-                  'Tus ventas, compras y gastos aparecerán cuando los registres.',
-              action: writer
-                  ? FinkiButton(
-                      label: 'Registrar mi primera venta',
-                      onPressed: () => openForm('VENTA'))
-                  : null),
-        ...history.take(3).map(operationRow),
+        const SizedBox(height: 16),
+        Card(
+            child: ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                leading: const Icon(Icons.picture_as_pdf_outlined,
+                    color: AppTheme.brandBlue, size: 30),
+                title: const Text('Mi constancia',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('Prepara un resumen de tu negocio en PDF'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) =>
+                        CertificatePage(api: api, business: business!))))),
         const SizedBox(height: 24),
         if (writer && accounts.length >= 2)
           TextButton(
@@ -922,7 +1011,7 @@ class _BusinessHomeState extends State<BusinessHome>
         metricPair('Gastos operativos', 'gastos_minor', 'Compras de mercadería',
             'compras_minor'),
         tile(
-            'Resultado estimado',
+            'Ganancia estimada',
             report?['resultado_operativo_simplificado_minor'],
             Icons.calculate_outlined),
         const FinkiNotice(

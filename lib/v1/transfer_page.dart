@@ -133,8 +133,8 @@ class _TransferPageState extends State<TransferPage> {
                     controller: amount,
                     keyboardType:
                         const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                        labelText: 'Importe', prefixText: 'S/ '),
+                    decoration: InputDecoration(
+                        labelText: 'Importe', prefixText: '$currencySymbol '),
                     validator: (s) {
                       try {
                         toMinor(s ?? '');

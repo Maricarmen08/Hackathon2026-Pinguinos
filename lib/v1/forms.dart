@@ -5,6 +5,7 @@ import 'local_entry.dart';
 import 'api_client.dart';
 import 'app.dart';
 import 'money.dart';
+import 'countries.dart';
 import 'presentation.dart';
 import '../ui/widgets/finki_brand.dart';
 import '../ui/widgets/finki_components.dart';
@@ -42,6 +43,7 @@ class _EntryFormState extends State<EntryForm> {
       extra = TextEditingController(),
       date = TextEditingController(text: limaToday());
   String mode = 'CONTADO', categoryType = 'VENTA', accountType = 'EFECTIVO';
+  String country = 'PE';
   String? channel = 'EFECTIVO', category, person, account;
   bool busy = false;
   LocalDraft? draft;
@@ -195,7 +197,7 @@ class _EntryFormState extends State<EntryForm> {
                       : TextInputType.text,
               decoration: InputDecoration(
                   labelText: label,
-                  prefixText: money ? 'S/ ' : null,
+                  prefixText: money ? '$currencySymbol ' : null,
                   counterText: '',
                   hintText: money ? '0.00' : null),
               errorBuilder: (context, error) => FinkiFieldError(error),
@@ -320,7 +322,8 @@ class _EntryFormState extends State<EntryForm> {
           'id': widget.api.newId(),
           'nombre': name.text.trim(),
           'rubro': extra.text.trim(),
-          'inicio_historial': date.text
+          'inicio_historial': date.text,
+          'pais': country
         };
       } else if (kind == 'businessEdit') {
         type = 'ACTUALIZAR_NEGOCIO';
@@ -556,6 +559,18 @@ class _EntryFormState extends State<EntryForm> {
                                   if (kind == 'business' ||
                                       kind == 'businessEdit')
                                     text(extra, 'Rubro del negocio', max: 80),
+                                  if (kind == 'business') ...[
+                                    select(
+                                        'País',
+                                        country,
+                                        labels({
+                                          for (final c in kCountries)
+                                            c.code: '${c.name} · ${c.currencyName}'
+                                        }),
+                                        (v) => setState(() => country = v!)),
+                                    FinkiFieldHelp(
+                                        'Tus montos se mostrarán en ${countryByCode(country).currencyName.toLowerCase()}. No podrás cambiarlo después.'),
+                                  ],
                                   if (kind == 'person')
                                     text(extra, 'Celular (opcional)',
                                         required: false, max: 16),
@@ -571,8 +586,8 @@ class _EntryFormState extends State<EntryForm> {
                                         }),
                                         (v) =>
                                             setState(() => accountType = v!)),
-                                    const FinkiFieldHelp(
-                                        'La cuenta empieza con saldo S/ 0.00. No se crea ningún ingreso inicial.'),
+                                    FinkiFieldHelp(
+                                        'La cuenta empieza con saldo ${soles('0')}. No se crea ningún ingreso inicial.'),
                                   ],
                                   if (kind == 'category')
                                     select(

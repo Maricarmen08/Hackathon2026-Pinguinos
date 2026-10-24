@@ -93,6 +93,60 @@ int? _belowThousand(String value) {
   return null;
 }
 
+/// Texto con varios renglones, cada uno con su importe:
+/// "comida para perro 10 soles, hueso de juguete 15 soles".
+/// Devuelve los renglones solo si TODO el texto encaja; si no, lista vacía
+/// y se conserva el comportamiento anterior (pedir el total).
+List<ReceiptItem> parseMoneyList(String text) {
+  final plain = _plain(text);
+  final source = plain.length == text.length ? text : plain;
+  final words = [..._small.keys, ..._tens.keys, ..._hundreds.keys, 'mil', 'y']
+      .join('|');
+  final amount = RegExp(
+      '(\\d+(?:[.,]\\d{1,2})?|(?:(?:$words)\\s+){0,6}(?:$words))\\s+(?:sol(?:es)?|pesos?|dolar(?:es)?|bolivianos?)\\b');
+  final found = amount.allMatches(plain).toList();
+  if (found.length < 2) return const [];
+  final items = <ReceiptItem>[];
+  var from = 0;
+  for (var i = 0; i < found.length; i++) {
+    final m = found[i];
+    var name = source.substring(from, m.start);
+    from = m.end;
+    name = name
+        .replaceFirst(RegExp(r'^(?:[\s,;.:]|\b(?:y|e|mas)\b)+', caseSensitive: false), '')
+        .replaceFirst(RegExp(r'[\s,;.:]+$'), '');
+    // Un verbo (vendí, gasté...) solo se acepta al inicio; si aparece entre
+    // renglones son varias operaciones y se pide el total.
+    final verb = RegExp(r'^(?:vendi|gaste|compre|pague|cobre|fie)\b\s*')
+        .firstMatch(_plain(name));
+    if (verb != null) {
+      if (i > 0) return const [];
+      name = name.substring(verb.end);
+    }
+    if (!RegExp(r'^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ ._-]{1,59}$')
+            .hasMatch(name) ||
+        RegExp(r'\b(?:cada|c/u|unidad)\b', caseSensitive: false)
+            .hasMatch(name)) {
+      return const [];
+    }
+    final raw = m[1]!;
+    final minor = _numeric(raw) ??
+        (() {
+          final n = _spoken(raw);
+          return n == null || n <= 0
+              ? null
+              : (BigInt.from(n) * BigInt.from(100)).toString();
+        })();
+    if (minor == null) return const [];
+    items.add(ReceiptItem(name[0].toUpperCase() + name.substring(1), minor, null));
+  }
+  // Nada de texto suelto después del último importe.
+  if (RegExp(r'[a-z0-9]').hasMatch(plain.substring(found.last.end))) {
+    return const [];
+  }
+  return items;
+}
+
 int? _spoken(String value) {
   final parts = value.trim().split(RegExp(r'\s*\bmil\b\s*'));
   if (parts.length == 1) return _belowThousand(value);
@@ -162,13 +216,18 @@ class LocalRules {
     if (RegExp(r'\b(vendi|venta|vendido|fie|fiado)\b').hasMatch(plain)) {
       intents.add('VENTA');
     }
-    if (RegExp(r'\b(gaste|gasto)\b').hasMatch(plain)) {
+    if (RegExp(r'\b(gaste|gasto)\b').hasMatch(plain) ||
+        RegExp(r'\bpague\s+(?:la\s+|el\s+|mi\s+|los\s+|las\s+)?(?:luz|agua|alquiler|internet|pasajes?|sueldos?|telefono|gas|recibo)\b')
+            .hasMatch(plain)) {
       intents.add('GASTO_OPERATIVO');
     }
     if (RegExp(r'\b(compre|compra)\b').hasMatch(plain)) {
       intents.add('COMPRA_MERCADERIA');
     }
-    if (RegExp(r'\b(abono|abonaron|me pago|me pagaron)\b').hasMatch(plain)) {
+    if (RegExp(r'\b(abono|abonaron|me pago|me pagaron|me cancelo|me cancelaron|me devolvieron)\b')
+            .hasMatch(plain) ||
+        RegExp(r'\bcobre\b').hasMatch(plain) &&
+            RegExp(r'\b(deuda|fiado|pendiente|cuenta)\b').hasMatch(plain)) {
       intents.add('COBRO');
     }
     if (RegExp(r'\bpague\b').hasMatch(plain) &&
@@ -185,6 +244,13 @@ class LocalRules {
     }
     final amounts = <String>{};
     var ambiguousAmount = false;
+    final listItems = parseMoneyList(text);
+    final listed = listItems.length >= 2 && intents.length <= 1;
+    if (listed) {
+      amounts.add(listItems
+          .fold<BigInt>(BigInt.zero, (sum, i) => sum + BigInt.parse(i.amountMinor))
+          .toString());
+    }
     final vocabulary = [
       ..._small.keys,
       ..._tens.keys,
@@ -194,7 +260,7 @@ class LocalRules {
       'cero'
     ].join('|');
     final pair = RegExp(
-        '((?:(?:$vocabulary)\\s+){0,8}(?:$vocabulary|\\d+))\\s+con\\s+((?:(?:$vocabulary)\\s+){0,4}(?:$vocabulary|\\d+))\\s+sol(?:es)?\\b');
+        '((?:(?:$vocabulary)\\s+){0,8}(?:$vocabulary|\\d+))\\s+con\\s+((?:(?:$vocabulary)\\s+){0,4}(?:$vocabulary|\\d+))\\s+(?:sol(?:es)?|pesos?|dolar(?:es)?|bolivianos?)\\b');
     final moneyText = plain.replaceAllMapped(pair, (m) {
       final whole = m[1] == 'cero' ? 0 : int.tryParse(m[1]!) ?? _spoken(m[1]!);
       final cents = m[2] == 'cero' ? 0 : int.tryParse(m[2]!) ?? _spoken(m[2]!);
@@ -222,7 +288,7 @@ class LocalRules {
     if (amounts.isEmpty && !receipt) {
       for (final pattern in [
         RegExp(r'\bs/\.?\s*(\d(?:[\d., ]*\d)?)'),
-        RegExp(r'\b(\d(?:[\d., ]*\d)?)\s*sol(?:es)?\b')
+        RegExp(r'\b(\d(?:[\d., ]*\d)?)\s*(?:sol(?:es)?|pesos?|dolar(?:es)?|bolivianos?)\b')
       ]) {
         for (final m in pattern.allMatches(moneyText)) {
           // Do not turn a partially recognised mixed number into its last digit:
@@ -244,7 +310,7 @@ class LocalRules {
         'y'
       ].join('|');
       final spoken = RegExp(
-          '((?:(?:$numberWords)\\s+){0,8}(?:$numberWords))\\s+sol(?:es)?\\b');
+          '((?:(?:$numberWords)\\s+){0,8}(?:$numberWords))\\s+(?:sol(?:es)?|pesos?|dolar(?:es)?|bolivianos?)\\b');
       for (final m in spoken.allMatches(moneyText)) {
         final n = _spoken(m[1]!);
         if (n != null && n > 0) {
@@ -282,6 +348,16 @@ class LocalRules {
         ambiguousAmount = true;
       }
     }
+    // "3 gaseosas a 2 soles" or "2 soles cada una" is a unit price, not the
+    // total: never save S/2.00 for a S/6.00 sale. The user is asked for the total.
+    if (!image &&
+        kind != 'DESCONOCIDO' &&
+        (RegExp(r'\b(cada\s+(?:uno|una|u)|c\s*/\s*u|la\s+unidad|por\s+unidad|x\s+unidad)\b')
+                .hasMatch(plain) ||
+            RegExp(r'\b(?:[2-9]|\d{2,}|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|docena|media docena)\s+(?!(?:sol(?:es)?|pesos?|dolar(?:es)?|bolivianos?)\b|s/)(?:[a-z]+\s+){0,3}(?:a|x)\s+(?:s/\.?\s*)?\d')
+                .hasMatch(plain))) {
+      ambiguousAmount = true;
+    }
     String? amount = amounts.length == 1 ? amounts.single : null;
     if (ambiguousAmount ||
         RegExp(r'\b(millon|millones|billon|billones)\b').hasMatch(plain)) {
@@ -289,7 +365,7 @@ class LocalRules {
     }
     if (RegExp(r'(^|[^0-9a-z])[-−]\s*\d').hasMatch(plain)) amount = null;
     final cents =
-        RegExp(r'\bsol(?:es)?\s+con\s+([a-z ]+|\d{1,2})\s+cent(?:imos|avos)\b')
+        RegExp(r'\b(?:sol(?:es)?|pesos?|dolar(?:es)?|bolivianos?)\s+con\s+([a-z ]+|\d{1,2})\s+cent(?:imos|avos)\b')
             .firstMatch(plain);
     if (cents != null && amount != null) {
       final coin = int.tryParse(cents[1]!.trim()) ?? _spoken(cents[1]!);
@@ -400,7 +476,7 @@ class LocalRules {
       }
     }
     var concept = RegExp(
-            r'\bsol(?:es)?\s+(?:de|en|son)\s+(.+?)(?:\s+(?:por yape|por plin|en efectivo|ayer|hoy)|$)')
+            r'\b(?:sol(?:es)?|pesos?|dolar(?:es)?|bolivianos?)\s+(?:de|en|son)\s+(.+?)(?:\s+(?:por yape|por plin|en efectivo|ayer|hoy)|$)')
         .firstMatch(plain)
         ?.group(1);
     if (kind == 'VENTA' && plain.contains('fiado') && concept == null) {
@@ -434,6 +510,7 @@ class LocalRules {
               : null;
       concept ??= ReceiptDetails.parse(text).concept;
     }
+    if (listed) concept = listItems.map((i) => i.name).join(' · ');
     if (concept != null && concept.length > 240) {
       concept = concept.substring(0, 240);
     }
@@ -445,12 +522,17 @@ class LocalRules {
       'persona': person,
       'referencia': reference,
       'medio': medium,
-      'fiado': kind == 'VENTA' && RegExp(r'\b(fie|fiado)\b').hasMatch(plain),
+      'fiado': kind == 'VENTA' &&
+          RegExp(r'\b(fie|fiado|a\s+credito|queda(?:ron)?\s+debiendo|quedo\s+debiendo|me\s+deb(?:e|en))\b')
+              .hasMatch(plain),
       'es_pago': payment,
       'pregunta': kind == 'DESCONOCIDO'
-          ? '¿Qué representa este registro?'
+          ? (RegExp(r'\bme\s+(?:yapearon|plinearon|depositaron|transfirieron)\b|\bcobre\b')
+                  .hasMatch(plain)
+              ? '¿Fue una venta nueva o te pagaron una deuda?'
+              : '¿Fue una venta, un gasto o un cobro?')
           : amount == null
-              ? '¿Cuál fue el importe total?'
+              ? '¿Cuánto fue en total?'
               : null,
       'texto_visible': text.length > 6000 ? text.substring(0, 6000) : text
     };

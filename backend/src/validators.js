@@ -16,7 +16,7 @@ const device = z.object({ nombre: text(100), plataforma: z.enum(['ANDROID','IOS'
 const register = z.object({ nombre: text(120), telefono: phone, correo: nullable(email), clave: password, dispositivo: device }).strict();
 const login = z.object({ usuario: text(254).transform(v => /^[+]?[1-9][0-9]{7,14}$/.test(v)?normalizePhone(v):v.toLowerCase()), clave: z.string().min(1).max(128), dispositivo: device }).strict();
 const refresh = z.object({ refresh_token: z.string().min(20).max(4096) }).strict();
-const business = z.object({ id: uuid, nombre: text(120), rubro: text(80), inicio_historial: date, ciudad: nullable(text(80)) }).strict();
+const business = z.object({ id: uuid, nombre: text(120), rubro: text(80), inicio_historial: date, ciudad: nullable(text(80)), pais: z.enum(require('./countries').CODES).default('PE') }).strict();
 const channel = z.enum(['EFECTIVO','YAPE','PLIN','TRANSFERENCIA','OTRO']);
 const movement = z.object({ id: uuid, cuenta_id: nullable(uuid), monto_minor: amount, fecha_movimiento: date, canal: channel, concepto: text(240), referencia_externa: nullable(text(120)) }).strict();
 const allocation = z.object({ id: uuid, operacion_id: uuid, monto_minor: amount }).strict();

@@ -20,15 +20,15 @@ class _InsightsPageState extends State<InsightsPage> {
   bool unsupported = false, externalPaused = false;
   List<Json> clarificationOptions = [];
   static const suggestions = <String, String>{
-    'Ventas de hoy': '¿Cuánto vendí hoy?',
-    'Ventas del mes': '¿Cuánto vendí este mes?',
-    'Mayor gasto': '¿En qué gasto más?',
-    'Gastos semanales': '¿Cuánto gasté esta semana?',
-    'Me deben': '¿Cuánto me deben?',
-    'Comparar ventas': '¿Vendí más que el mes pasado?',
-    'Cobros semanales': '¿Cuánto dinero cobré esta semana?',
-    'Mercadería': '¿Cuánto gasté en mercadería?',
-    'Resumen semanal': 'Mi resumen semanal',
+    '¿Cuánto vendí hoy?': '¿Cuánto vendí hoy?',
+    '¿Cuánto vendí este mes?': '¿Cuánto vendí este mes?',
+    '¿Quién me debe?': '¿Quién me debe?',
+    '¿Cuánto gasté esta semana?': '¿Cuánto gasté esta semana?',
+    '¿En qué gasto más?': '¿En qué gasto más?',
+    '¿Cuánto cobré esta semana?': '¿Cuánto cobré esta semana?',
+    '¿Cuánto gasté en mercadería?': '¿Cuánto gasté en mercadería?',
+    '¿Vendí más que el mes pasado?': '¿Vendí más que el mes pasado?',
+    '¿Cómo va mi negocio?': 'Mi resumen semanal',
   };
   Future<void> ask(String input, {bool external = false}) async {
     final q = input.trim();
@@ -96,13 +96,13 @@ class _InsightsPageState extends State<InsightsPage> {
       }
       if (mounted && answer == null) {
         setState(() => error = e.status == 0
-            ? 'No pude conectar con tu negocio y no tengo una respuesta guardada para esta pregunta. Conéctate y vuelve a consultar.'
+            ? 'No hay internet y todavía no tengo guardada esta respuesta. Conéctate e inténtalo otra vez.'
             : e.message);
       }
     } catch (_) {
       if (mounted) {
         setState(() =>
-            error = 'No pude completar la consulta. Inténtalo nuevamente.');
+            error = 'No pude responderte. Inténtalo otra vez.');
       }
     } finally {
       if (mounted) {
@@ -158,7 +158,7 @@ class _InsightsPageState extends State<InsightsPage> {
               style: Theme.of(context).textTheme.headlineSmall),
           const SizedBox(height: 8),
           const Text(
-              'Consulta los registros de este negocio. Solo se envía tu pregunta a Gemini si autorizas ayuda externa; las cifras se calculan en Finki.'),
+              'Toca una pregunta o escribe la tuya. Te respondo con lo que tienes registrado en tu negocio.'),
           const SizedBox(height: 16),
           TextField(
               controller: question,
@@ -166,7 +166,7 @@ class _InsightsPageState extends State<InsightsPage> {
               minLines: 1,
               maxLines: 3,
               decoration: const InputDecoration(
-                  labelText: 'Tu pregunta', hintText: '¿Quién me debe más?'),
+                  labelText: 'Tu pregunta', hintText: 'Ejemplo: ¿alguien me debe?'),
               onChanged: (_) => setState(() => unsupported = false),
               onSubmitted: busy ? null : ask),
           FilledButton.icon(
@@ -183,21 +183,22 @@ class _InsightsPageState extends State<InsightsPage> {
                   ? 'Consultando tus registros…'
                   : 'Consultar mis registros')),
           const SizedBox(height: 16),
-          Text('Puedes preguntar por…',
-              style: Theme.of(context).textTheme.titleSmall),
+          Text('Preguntas fáciles, toca una:',
+              style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 6),
-          Wrap(spacing: 6, runSpacing: 4, children: [
+          Wrap(spacing: 8, runSpacing: 8, children: [
             for (final entry in suggestions.entries)
               ActionChip(
                   tooltip: entry.value,
                   onPressed: busy ? null : () => ask(entry.value),
-                  visualDensity: VisualDensity.compact,
-                  label: Text(entry.key, style: const TextStyle(fontSize: 12))),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+                  label: Text(entry.key, style: const TextStyle(fontSize: 15))),
           ]),
           const SizedBox(height: 8),
           const Text(
-              'Periodos: hoy, ayer, esta semana, este mes o del 01/10/2026 al 23/10/2026.',
-              style: TextStyle(fontSize: 12)),
+              'Puedes decir: hoy, ayer, esta semana, este mes o del 01/10/2026 al 23/10/2026.',
+              style: TextStyle(fontSize: 14)),
           if (answer != null || error != null)
             Card(
                 key: answerKey,
@@ -218,7 +219,7 @@ class _InsightsPageState extends State<InsightsPage> {
                                         fontWeight: FontWeight.w600))),
                           SelectableText(answer ?? error!,
                               style:
-                                  const TextStyle(fontSize: 16, height: 1.45)),
+                                  const TextStyle(fontSize: 18, height: 1.5)),
                           if (clarificationOptions.isNotEmpty) ...[
                             const SizedBox(height: 12),
                             Wrap(spacing: 8, runSpacing: 8, children: [
@@ -234,7 +235,7 @@ class _InsightsPageState extends State<InsightsPage> {
                           if (unsupported) ...[
                             const SizedBox(height: 16),
                             const Text(
-                                'Puedes reformular tu pregunta o pedir ayuda opcional de IA.'),
+                                'No entendí tu pregunta. Prueba con otras palabras, toca una de las preguntas de arriba o pídeme ayuda.'),
                             OutlinedButton(
                               onPressed: busy || externalPaused
                                   ? null
