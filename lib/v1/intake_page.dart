@@ -6,6 +6,7 @@ import 'local_ocr.dart';
 import 'local_rules.dart';
 import 'local_entry.dart';
 import 'local_media.dart';
+import 'web_ocr.dart';
 import 'receipt_details.dart';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -239,7 +240,7 @@ class _IntakePageState extends State<IntakePage> {
         extractionId = null;
         localEntry = {
           'id_local': draftId,
-          'tipo': source,
+          'tipo': source == 'IMAGEN' && evidenceId == null ? 'TEXTO' : source,
           'texto': value['texto_visible'],
           'propuesta': value,
           'comprobante_id': evidenceId
@@ -399,8 +400,28 @@ class _IntakePageState extends State<IntakePage> {
           imageBytes = bytes;
           source = 'IMAGEN';
         });
-        // Sin lector en el aparato, la imagen se lee con la ayuda por internet,
-        // que ya se autorizó una vez.
+        // En la web la imagen se lee dentro del navegador (Tesseract).
+        if (webOcrSupported()) {
+          final recognized = (await webOcrRead(bytes)).trim();
+          if (!mounted) return;
+          if (recognized.isNotEmpty) {
+            setState(() {
+              evidenceId = null;
+              draftId = null;
+              transcript = false;
+              picking = false;
+              analyzingImage = false;
+              text.text = recognized;
+            });
+            await interpretLocal();
+            if (mounted && proposal?['monto_minor'] == null) {
+              setState(() => error =
+                  'No pude identificar un total. Revisa el texto, repite la foto o pide ayuda por internet.');
+            }
+            return;
+          }
+        }
+        // Si no se pudo leer, se intenta con la ayuda por internet ya autorizada.
         if (consent && configured == true) {
           await analyze(bytes: bytes);
           return;
@@ -486,6 +507,35 @@ class _IntakePageState extends State<IntakePage> {
     }
   }
 
+  // En la web la voz la entiende el navegador (Chrome envía el audio a Google).
+  // Se avisa una sola vez y se recuerda.
+  Future<bool> webVoiceAccepted() async {
+    final key = 'web-voice-ok-v1:${widget.api.userId}';
+    try {
+      if (await widget.api.store.read(key) == '1') return true;
+    } catch (_) {}
+    if (!mounted) return false;
+    final ok = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+                title: const Text('Hablar en el navegador'),
+                content: const Text(
+                    'Para escribir lo que dices, tu navegador envía el audio a Google. FINKI no guarda el audio. Solo te lo preguntamos esta vez.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(c, false),
+                      child: const Text('Ahora no')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(c, true),
+                      child: const Text('Entendido, hablar'))
+                ]));
+    if (ok != true) return false;
+    try {
+      await widget.api.store.write(key, '1');
+    } catch (_) {}
+    return true;
+  }
+
   Future<void> voice() async {
     if (busy || picking) return;
     if (recording) {
@@ -503,6 +553,15 @@ class _IntakePageState extends State<IntakePage> {
     });
     await speechCapabilities;
     if (!mounted) return;
+    if (kIsWeb && nativeAvailable && !await webVoiceAccepted()) {
+      if (mounted) {
+        setState(() {
+          preparingVoice = false;
+          busy = false;
+        });
+      }
+      return;
+    }
     if (!nativeAvailable && !offlineVoiceAvailable) {
       setState(() {
         preparingVoice = false;
@@ -613,8 +672,11 @@ class _IntakePageState extends State<IntakePage> {
         text.text = previousText;
         if (e.code != 'CANCELLED') {
           setState(() => error = switch (e.code) {
-                'PERMISSION_REQUIRED' =>
-                  'Permite usar el micrófono en los ajustes del celular e intenta otra vez.',
+                'PERMISSION_REQUIRED' => kIsWeb
+                    ? 'Permite el micrófono en tu navegador (candado junto a la dirección) e intenta otra vez.'
+                    : 'Permite usar el micrófono en los ajustes del celular e intenta otra vez.',
+                'NETWORK' =>
+                  'El navegador necesita internet para entender tu voz. Revisa tu conexión o escribe el registro.',
                 'MIC_UNAVAILABLE' =>
                   'Android no pudo iniciar el micrófono. Cierra otras grabaciones e intenta otra vez.',
                 'MIC_BUSY' =>
@@ -629,8 +691,9 @@ class _IntakePageState extends State<IntakePage> {
                 'SPEECH_6' ||
                 'SPEECH_7' =>
                   'No escuché una frase clara. Habla cerca del micrófono o escríbela.',
-                _ =>
-                  'No pudimos reconocer la voz. Intenta otra vez o escribe el registro. No se envió audio por internet.',
+                _ => kIsWeb
+                    ? 'No pudimos reconocer la voz. Intenta otra vez o escribe el registro.'
+                    : 'No pudimos reconocer la voz. Intenta otra vez o escribe el registro. No se envió audio por internet.',
               });
         }
       }
@@ -668,11 +731,25 @@ class _IntakePageState extends State<IntakePage> {
     });
   }
 
+  // Cada paso se protege: si el navegador no responde al cerrar el micrófono,
+  // la pantalla igual se libera.
   Future<void> cancelVoice() async {
     timer?.cancel();
-    if (nativeListening) await localSpeech.cancel();
-    await _recorder?.stop();
-    await stream?.cancel();
+    const wait = Duration(seconds: 3);
+    try {
+      if (nativeListening) await localSpeech.cancel().timeout(wait);
+    } catch (_) {}
+    try {
+      await (stream?.cancel() ?? Future<void>.value()).timeout(wait);
+    } catch (_) {}
+    try {
+      await _recorder?.stop().timeout(wait);
+    } catch (_) {}
+    try {
+      final old = _recorder;
+      _recorder = null;
+      await old?.dispose().timeout(wait);
+    } catch (_) {}
     chunks.clear();
     if (mounted) setState(() => recording = false);
   }

@@ -30,6 +30,7 @@ function loadConfig(env = process.env, filename = '.env') {
     GEMINI_API_KEY: z.string().default(''),
     GEMINI_MODEL: z.literal('gemini-3.5-flash-lite').default('gemini-3.5-flash-lite'),
     AI_MAX_REQUESTS_PER_DAY: z.coerce.number().int().min(1).max(100).default(20),
+    AI_MAX_REQUESTS_PER_MINUTE: z.coerce.number().int().min(1).max(30).default(10),
     OPENAI_API_KEY: z.string().default(''),
     AI_TRANSCRIPTION_MODEL: z.string().min(1).max(100).default('gpt-transcribe'),
     AI_EXTRACTION_MODEL: z.string().min(1).max(100).default('gpt-4o-mini')

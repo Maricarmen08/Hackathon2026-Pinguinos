@@ -61,3 +61,11 @@ test('presupuesto persiste entre instancias, falla cerrado y limita frecuencia',
     fs.writeFileSync(file,'broken');assert.throws(()=>b.reserve(),e=>e.code==='AI_BUDGET_UNAVAILABLE');
   }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
+test('el límite por minuto es configurable',()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'finki-gemini-')),file=path.join(dir,'budget.json');const now=Date.parse('2026-10-22T00:00Z');
+  try{
+    const b=new DailyBudget(file,50,()=>now,5);for(let i=0;i<5;i++)b.reserve();
+    assert.throws(()=>b.reserve(),e=>e.code==='AI_QUOTA_EXHAUSTED');
+    assert.equal(b.availability().motivo,'MINUTE_LIMIT');
+  }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});

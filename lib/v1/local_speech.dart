@@ -1,11 +1,19 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
+import 'web_voice.dart';
 
 /// Native on-device recognition or bundled Vosk. No cloud fallback.
+/// En la web usa el reconocimiento de voz del navegador (Chrome/Edge).
 class LocalSpeech {
   static const channel = MethodChannel('finki/local_speech');
   String _engine = 'native';
   String get engine => _engine;
   Future<Map<String, dynamic>> capabilities() async {
+    if (kIsWeb) {
+      return webVoiceSupported()
+          ? {'onDevice': true, 'spanishInstalled': true, 'offlineModel': false}
+          : {'onDevice': false};
+    }
     try {
       return Map<String, dynamic>.from(
           await channel.invokeMapMethod<String, dynamic>('capabilities') ?? {});
@@ -17,6 +25,13 @@ class LocalSpeech {
   }
 
   Future<void> prepare({required bool preferNative}) async {
+    if (kIsWeb) {
+      if (!webVoiceSupported()) {
+        throw PlatformException(code: 'OFFLINE_MODEL_UNAVAILABLE');
+      }
+      _engine = 'native';
+      return;
+    }
     final prepared = await channel.invokeMapMethod<String, dynamic>(
         'prepare', {'preferNative': preferNative});
     final selected = prepared?['engine'];
@@ -28,6 +43,12 @@ class LocalSpeech {
 
   Future<String> listen(void Function(String) partial,
       {void Function()? onReady, void Function()? onProcessing}) async {
+    if (kIsWeb) {
+      final raw = await webVoiceListen(partial, () => onReady?.call());
+      if (raw.startsWith('OK:')) return raw.substring(3);
+      throw PlatformException(
+          code: raw.startsWith('ERR:') ? raw.substring(4) : 'FAILED');
+    }
     channel.setMethodCallHandler((call) async {
       if (call.method == 'partial' && call.arguments is String) {
         partial(call.arguments as String);
@@ -51,8 +72,19 @@ class LocalSpeech {
     }
   }
 
-  Future<void> stop() => channel.invokeMethod<void>('stop');
+  Future<void> stop() async {
+    if (kIsWeb) {
+      webVoiceStop();
+      return;
+    }
+    await channel.invokeMethod<void>('stop');
+  }
+
   Future<void> cancel() async {
+    if (kIsWeb) {
+      webVoiceCancel();
+      return;
+    }
     try {
       await channel.invokeMethod<void>('cancel');
     } on MissingPluginException {
