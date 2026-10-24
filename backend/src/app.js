@@ -20,9 +20,13 @@ function createApp({db,config}) {
   app.disable('x-powered-by');app.set('trust proxy',1);
   app.set('json replacer',(key,value)=>typeof value==='string'&&key.endsWith('_en')&&/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?$/.test(value)?value.replace(' ','T')+'Z':value);
   app.use((req,res,next)=>{req.requestId=randomUUID();res.set('X-Request-ID',req.requestId);res.set('Cache-Control','no-store');next();});
-  app.use(helmet());
+  app.use(helmet({contentSecurityPolicy:false}));
   const origins=config.CORS_ORIGINS.split(',').map(v=>v.trim()).filter(Boolean);
-  app.use(cors({origin:(origin,cb)=>!origin||origins.includes(origin)?cb(null,true):cb(new ApiError(403,'CORS_FORBIDDEN','Origen no permitido')),credentials:false}));
+  app.use(cors((req,cb)=>{
+    const origin=req.header('Origin');
+    const sameHost=origin&&(origin===`${req.protocol}://${req.get('host')}`||origin===`https://${req.get('host')}`);
+    return !origin||sameHost||origins.includes(origin)?cb(null,{origin:true,credentials:false}):cb(new ApiError(403,'CORS_FORBIDDEN','Origen no permitido'));
+  }));
   app.use(express.json({limit:'64kb',strict:true}));
   const router=express.Router();
   const limiter=rateLimit({windowMs:60*1000,limit:10,standardHeaders:'draft-8',legacyHeaders:false,
@@ -122,6 +126,11 @@ function createApp({db,config}) {
   }));
   router.get('/negocios/:id/sync/snapshot',secured,wrap(async(req,res)=>res.json(await reads.snapshot(bid(req),req.actor))));
   app.use('/api/v1',router);
+  const path=require('node:path'),fs=require('node:fs'),webDir=path.join(__dirname,'..','web_build');
+  if(fs.existsSync(path.join(webDir,'index.html'))){
+    app.use(express.static(webDir));
+    app.get(/^(?!\/api\/).*/,(_req,res)=>res.sendFile(path.join(webDir,'index.html')));
+  }
   app.use((_req,_res,next)=>next(new ApiError(404,'NOT_FOUND','Ruta no encontrada')));
   app.use(errorHandler);
   return app;
