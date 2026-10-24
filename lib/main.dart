@@ -147,278 +147,225 @@ class _FinkiDesktopShowcaseState extends State<_FinkiDesktopShowcase> {
             SafeArea(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1280),
+                  constraints: const BoxConstraints(maxWidth: 1240),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 44, vertical: 24),
+                        horizontal: 64, vertical: 32),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
                           flex: 11,
-                          child: Center(
-                            child: ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 590),
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 7),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(999),
+                                    border: Border.all(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.22)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.verified_rounded,
+                                          color: Color(0xFF38BDF8), size: 16),
+                                      SizedBox(width: 8),
+                                      Flexible(
+                                        child: Text(
+                                          'DESAFÍO 4 · EQUIPO LOS PINGÜINOS DE MADAGASCAR',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: 0.7,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                Row(
                                   children: [
                                     Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 14, vertical: 7),
+                                      width: 58,
+                                      height: 58,
+                                      padding: const EdgeInsets.all(6),
                                       decoration: BoxDecoration(
-                                        color:
-                                            Colors.white.withValues(alpha: 0.1),
-                                        borderRadius:
-                                            BorderRadius.circular(999),
-                                        border: Border.all(
-                                            color: Colors.white
-                                                .withValues(alpha: 0.22)),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.verified_rounded,
-                                              color: Color(0xFF38BDF8),
-                                              size: 16),
-                                          SizedBox(width: 8),
-                                          Flexible(
-                                            child: Text(
-                                              'DESAFÍO 4 · EQUIPO LOS PINGÜINOS DE MADAGASCAR',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 11.5,
-                                                fontWeight: FontWeight.w800,
-                                                letterSpacing: 0.7,
-                                              ),
-                                            ),
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(18),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFF09AFDC)
+                                                .withValues(alpha: 0.35),
+                                            blurRadius: 18,
+                                            offset: const Offset(0, 6),
                                           ),
                                         ],
                                       ),
+                                      child: Image.asset(
+                                        'assets/branding/finki_logo_display.png',
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (_, __, ___) =>
+                                            const Icon(Icons.insights_rounded,
+                                                color: AppTheme.brandBlue,
+                                                size: 32),
+                                      ),
                                     ),
-                                    const SizedBox(height: 20),
-                                    Row(
-                                      children: [
-                                        Container(
-                                          width: 60,
-                                          height: 60,
-                                          padding: const EdgeInsets.all(6),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius:
-                                                BorderRadius.circular(18),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: const Color(0xFF09AFDC)
-                                                    .withValues(alpha: 0.35),
-                                                blurRadius: 18,
-                                                offset: const Offset(0, 6),
-                                              ),
-                                            ],
-                                          ),
-                                          child: Image.asset(
-                                            'assets/branding/finki_logo_display.png',
-                                            fit: BoxFit.contain,
-                                            errorBuilder: (_, __, ___) =>
-                                                const Icon(
-                                                    Icons.insights_rounded,
-                                                    color: AppTheme.brandBlue,
-                                                    size: 32),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            const Text(
-                                              'FINKI',
-                                              style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 42,
-                                                height: 1.0,
-                                                fontWeight: FontWeight.w900,
-                                                letterSpacing: -1.0,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'Asistente financiero con IA por voz e imagen',
-                                              style: TextStyle(
-                                                color: const Color(0xFF38BDF8)
-                                                    .withValues(alpha: 0.95),
-                                                fontSize: 13.5,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 18),
+                                    const SizedBox(width: 16),
                                     const Text(
-                                      'Ordena las finanzas de tu negocio y facilita tu acceso al crédito.',
+                                      'FINKI',
                                       style: TextStyle(
                                         color: Colors.white,
-                                        fontSize: 31,
-                                        height: 1.18,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: -0.5,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      'Asistente de IA por voz e imagen que digitaliza ingresos y gastos de pequeños negocios informales para ordenar sus finanzas y facilitar su acceso al crédito.',
-                                      style: TextStyle(
-                                        color: Colors.white
-                                            .withValues(alpha: 0.84),
-                                        fontSize: 15,
-                                        height: 1.5,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 22),
-                                    const Row(
-                                      children: [
-                                        Expanded(
-                                          child: _FeatureCard(
-                                            icon: Icons.mic_none_rounded,
-                                            title: 'IA por Voz e Imagen',
-                                            subtitle:
-                                                'Digitaliza ingresos y gastos hablando o tomando foto a notas y comprobantes.',
-                                          ),
-                                        ),
-                                        SizedBox(width: 12),
-                                        Expanded(
-                                          child: _FeatureCard(
-                                            icon: Icons
-                                                .account_balance_wallet_outlined,
-                                            title: 'Finanzas Ordenadas',
-                                            subtitle:
-                                                'Controla caja diaria, ventas, gastos y cuentas por cobrar o pagar.',
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    const Row(
-                                      children: [
-                                        Expanded(
-                                          child: _FeatureCard(
-                                            icon: Icons.verified_user_outlined,
-                                            title: 'Acceso al Crédito',
-                                            subtitle:
-                                                'Genera constancias verificables e indicadores reales de capacidad de pago.',
-                                          ),
-                                        ),
-                                        SizedBox(width: 12),
-                                        Expanded(
-                                          child: _FeatureCard(
-                                            icon: Icons.psychology_outlined,
-                                            title: 'Consultas Simples',
-                                            subtitle:
-                                                'Pregunta cómo va tu negocio en lenguaje natural y sin tecnicismos.',
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 24),
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white
-                                            .withValues(alpha: 0.06),
-                                        borderRadius: BorderRadius.circular(18),
-                                        border: Border.all(
-                                            color: Colors.white
-                                                .withValues(alpha: 0.14)),
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          Wrap(
-                                            alignment: WrapAlignment.center,
-                                            spacing: 12,
-                                            runSpacing: 10,
-                                            children: [
-                                              FilledButton.icon(
-                                                style: FilledButton.styleFrom(
-                                                  backgroundColor:
-                                                      const Color(0xFF09AFDC),
-                                                  foregroundColor: Colors.white,
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 18,
-                                                      vertical: 13),
-                                                ),
-                                                onPressed: () => setState(
-                                                    () => _phoneFrame = false),
-                                                icon: const Icon(
-                                                    Icons.fullscreen_rounded,
-                                                    size: 19),
-                                                label: const Text(
-                                                    'Expandir pantalla completa'),
-                                              ),
-                                              OutlinedButton.icon(
-                                                style: OutlinedButton.styleFrom(
-                                                  foregroundColor: Colors.white,
-                                                  side: BorderSide(
-                                                      color: Colors.white
-                                                          .withValues(
-                                                              alpha: 0.35)),
-                                                  backgroundColor: Colors.white
-                                                      .withValues(alpha: 0.08),
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                      horizontal: 18,
-                                                      vertical: 13),
-                                                ),
-                                                onPressed: () => setState(() =>
-                                                    _showMobileModal = true),
-                                                icon: const Icon(
-                                                    Icons.qr_code_2_rounded,
-                                                    color: Color(0xFF38BDF8),
-                                                    size: 19),
-                                                label: const Text(
-                                                    'Abrir en celular'),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              const Icon(
-                                                  Icons.touch_app_rounded,
-                                                  color: Color(0xFF4ADE80),
-                                                  size: 17),
-                                              const SizedBox(width: 8),
-                                              Flexible(
-                                                child: Text(
-                                                  'Interactúa en vivo con el teléfono a la derecha',
-                                                  textAlign: TextAlign.center,
-                                                  style: TextStyle(
-                                                    color: Colors.white
-                                                        .withValues(alpha: 0.9),
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
+                                        fontSize: 44,
+                                        height: 1.0,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: -1.0,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
+                                const SizedBox(height: 20),
+                                const Text(
+                                  'Asistente de IA por voz e imagen para pequeños negocios.',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 30,
+                                    height: 1.2,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Digitaliza ingresos y gastos de pequeños negocios informales para ordenar sus finanzas y facilitar su acceso al crédito.',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.82),
+                                    fontSize: 15,
+                                    height: 1.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 28),
+                                const Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: _FeatureCard(
+                                        icon: Icons.mic_rounded,
+                                        title: 'IA por Voz e Imagen',
+                                        subtitle:
+                                            'Registra ventas y gastos con audio o foto.',
+                                      ),
+                                    ),
+                                    SizedBox(width: 14),
+                                    Expanded(
+                                      child: _FeatureCard(
+                                        icon: Icons
+                                            .account_balance_wallet_rounded,
+                                        title: 'Finanzas Ordenadas',
+                                        subtitle:
+                                            'Controla caja diaria, cobros y pagos.',
+                                      ),
+                                    ),
+                                    SizedBox(width: 14),
+                                    Expanded(
+                                      child: _FeatureCard(
+                                        icon: Icons.verified_user_rounded,
+                                        title: 'Acceso al Crédito',
+                                        subtitle:
+                                            'Constancias e indicadores de tu negocio.',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 30),
+                                Center(
+                                  child: Column(
+                                    children: [
+                                      Wrap(
+                                        alignment: WrapAlignment.center,
+                                        spacing: 14,
+                                        runSpacing: 10,
+                                        children: [
+                                          FilledButton.icon(
+                                            style: FilledButton.styleFrom(
+                                              backgroundColor:
+                                                  const Color(0xFF09AFDC),
+                                              foregroundColor: Colors.white,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 20,
+                                                      vertical: 14),
+                                            ),
+                                            onPressed: () => setState(
+                                                () => _phoneFrame = false),
+                                            icon: const Icon(
+                                                Icons.fullscreen_rounded,
+                                                size: 20),
+                                            label: const Text(
+                                                'Expandir pantalla completa'),
+                                          ),
+                                          OutlinedButton.icon(
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: Colors.white,
+                                              side: BorderSide(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.35)),
+                                              backgroundColor: Colors.white
+                                                  .withValues(alpha: 0.08),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 20,
+                                                      vertical: 14),
+                                            ),
+                                            onPressed: () => setState(
+                                                () => _showMobileModal = true),
+                                            icon: const Icon(
+                                                Icons.qr_code_2_rounded,
+                                                color: Color(0xFF38BDF8),
+                                                size: 20),
+                                            label:
+                                                const Text('Abrir en celular'),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 14),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.touch_app_rounded,
+                                              color: Color(0xFF4ADE80),
+                                              size: 17),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Interactúa en vivo con el teléfono a la derecha',
+                                            style: TextStyle(
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.85),
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                        const SizedBox(width: 36),
+                        const SizedBox(width: 64),
                         Expanded(
-                          flex: 9,
+                          flex: 8,
                           child: Center(
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
@@ -593,39 +540,41 @@ class _FeatureCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 112,
-      padding: const EdgeInsets.all(14),
+      height: 148,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(icon, color: const Color(0xFF38BDF8), size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFF38BDF8).withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: const Color(0xFF38BDF8), size: 26),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 5),
           Expanded(
             child: Text(
               subtitle,
-              maxLines: 3,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.78),

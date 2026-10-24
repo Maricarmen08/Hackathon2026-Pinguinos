@@ -20,7 +20,7 @@ function createApp({db,config}) {
   app.disable('x-powered-by');app.set('trust proxy',1);
   app.set('json replacer',(key,value)=>typeof value==='string'&&key.endsWith('_en')&&/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?$/.test(value)?value.replace(' ','T')+'Z':value);
   app.use((req,res,next)=>{req.requestId=randomUUID();res.set('X-Request-ID',req.requestId);res.set('Cache-Control','no-store');next();});
-  app.use(helmet({contentSecurityPolicy:false}));
+  app.use(helmet({contentSecurityPolicy:false,crossOriginOpenerPolicy:{policy:'same-origin-allow-popups'}}));
   const origins=config.CORS_ORIGINS.split(',').map(v=>v.trim()).filter(Boolean);
   app.use(cors((req,cb)=>{
     const origin=req.header('Origin');

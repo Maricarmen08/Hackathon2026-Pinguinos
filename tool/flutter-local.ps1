@@ -11,7 +11,7 @@ if (-not $env:JAVA_TOOL_OPTIONS) {
     $env:JAVA_TOOL_OPTIONS = '-XX:ActiveProcessorCount=2 -XX:+UseSerialGC -XX:TieredStopAtLevel=1'
 }
 $flutterCommand = Get-Command flutter -ErrorAction SilentlyContinue
-$flutterExecutable = if ($flutterCommand) { $flutterCommand.Source } elseif (Test-Path 'D:\desarrollo\flutter\bin\flutter.bat') { 'D:\desarrollo\flutter\bin\flutter.bat' } else { throw 'Agrega Flutter al PATH.' }
+$flutterExecutable = if ($flutterCommand) { $flutterCommand.Source } elseif (Test-Path 'D:\desarrollo\flutter\bin\flutter.bat') { 'D:\desarrollo\flutter\bin\flutter.bat' } elseif (Test-Path 'C:\src\flutter\bin\flutter.bat') { 'C:\src\flutter\bin\flutter.bat' } else { throw 'Agrega Flutter al PATH.' }
 $buildLock = $null
 try {
     $buildLock = [System.IO.File]::Open((Join-Path $localBuild 'flutter-local.lock'),
