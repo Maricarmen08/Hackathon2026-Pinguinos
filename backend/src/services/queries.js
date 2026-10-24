@@ -105,10 +105,9 @@ function readService(db) {
     async snapshot(bid,actor) {
       return db.snapshot(async s=>{
         await requireSession(s,actor);const {business}=await membership(s,bid,actor.sub);
-        const counter=await s.get('sync_contadores',{negocio_id:bid});
-        const entidades=[{tabla:'negocios',registros:[business]}];
-        for(const table of ['categorias','terceros','cuentas','operaciones','movimientos','aplicaciones','transferencias','cierres_diarios'])
-          entidades.push({tabla:table,registros:await s.list(table,{negocio_id:bid})});
+        const tables=['categorias','terceros','cuentas','operaciones','movimientos','aplicaciones','transferencias','cierres_diarios'];
+        const [counter,...lists]=await Promise.all([s.get('sync_contadores',{negocio_id:bid}),...tables.map(table=>s.list(table,{negocio_id:bid}))]);
+        const entidades=[{tabla:'negocios',registros:[business]},...tables.map((tabla,i)=>({tabla,registros:lists[i]}))];
         return {cursor:String(counter.ultimo_seq),entidades};
       });
     },

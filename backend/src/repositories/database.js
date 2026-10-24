@@ -54,7 +54,7 @@ class Database {
   }
   async connection() {
     const c=await this.pool.getConnection();
-    try { await c.query("SET SESSION time_zone='+00:00', sql_mode='STRICT_ALL_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION', foreign_key_checks=1, unique_checks=1, innodb_lock_wait_timeout=5"); return c; }
+    try { if (!c._finkiSessionInit) { await c.query("SET SESSION time_zone='+00:00', sql_mode='STRICT_ALL_TABLES,NO_ZERO_DATE,NO_ZERO_IN_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION', foreign_key_checks=1, unique_checks=1, innodb_lock_wait_timeout=5"); c._finkiSessionInit = true; } return c; }
     catch(e) { c.release();throw e; }
   }
   async read(fn) { const c=await this.connection(); try { return await fn(new Session(c)); } finally { c.release(); } }

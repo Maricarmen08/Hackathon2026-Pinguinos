@@ -429,18 +429,22 @@ class _BusinessHomeState extends State<BusinessHome>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed &&
         !loading &&
-        ModalRoute.of(context)?.isCurrent == true) {
+        ModalRoute.of(context)?.isCurrent == true &&
+        business == null) {
       load();
     }
   }
 
-  Future<void> load() async {
+  Future<void> load({bool silent = false}) async {
     dailyTimer?.cancel();
+    final showSpinner = !silent && report == null;
     if (mounted) {
       setState(() {
-        loading = true;
+        if (showSpinner) {
+          loading = true;
+          dailySales = null;
+        }
         error = null;
-        dailySales = null;
       });
     }
     try {
@@ -460,15 +464,22 @@ class _BusinessHomeState extends State<BusinessHome>
             if (![0, 403, 404, 409, 422, 503].contains(e.status)) rethrow;
           }
         }
-        report = await api.request('GET', '$path/indicadores');
+        final results = await Future.wait<dynamic>([
+          api.request('GET', '$path/indicadores'),
+          loadDailySales(),
+          api.all('$path/categorias'),
+          api.all('$path/terceros'),
+          loadList(),
+        ]);
+        report = results[0] as Json;
         accounts = (report!['cuentas'] as List)
             .map((x) => Map<String, dynamic>.from(x as Map))
             .toList();
-        await loadDailySales();
-        categories = await api.all('$path/categorias');
-        people = await api.all('$path/terceros');
-        await loadList();
-        if (!api.offline) await api.request('GET', '$path/sync/snapshot');
+        categories = results[2] as List<Json>;
+        people = results[3] as List<Json>;
+        if (!api.offline) {
+          unawaited(api.request('GET', '$path/sync/snapshot').catchError((_) => <String, dynamic>{}));
+        }
       }
     } catch (e) {
       error = e;
@@ -588,12 +599,16 @@ class _BusinessHomeState extends State<BusinessHome>
   bool get owner => business?['rol'] == 'PROPIETARIO';
   bool get writer => business?['rol'] != 'LECTOR';
   void selectTab(int value) {
-    tab = value;
-    search = '';
-    filter = '';
-    statusFilter = '';
-    historyPeriod = null;
-    load();
+    setState(() {
+      tab = value;
+      search = '';
+      filter = '';
+      statusFilter = '';
+      historyPeriod = null;
+    });
+    if (value == 1 || value == 2) {
+      loadList().then((_) { if (mounted) setState(() {}); }).catchError((_) {});
+    }
   }
 
   Widget metricPair(String a, String ak, String b, String bk) =>
