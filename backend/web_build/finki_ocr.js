@@ -27,8 +27,12 @@
         cacheMethod: 'none'
       });
     }).then(function (w) {
-      state.worker = w;
-      return w;
+      // Por defecto Tesseract lee "un solo bloque" y se salta números grandes
+      // (por ejemplo el monto de un Yape). Con segmentación automática los lee.
+      return w.setParameters({ tessedit_pageseg_mode: '3' }).then(function () {
+        state.worker = w;
+        return w;
+      });
     }).catch(function (e) {
       state.loading = null;
       throw e;
@@ -78,9 +82,22 @@
         setTimeout(function () { if (!done) resolve('ERR:TIMEOUT'); }, 90000);
       });
       var work = prepare(bytes).then(function (canvas) {
-        return getWorker().then(function (w) { return w.recognize(canvas); });
-      }).then(function (r) {
-        return 'OK:' + ((r && r.data && r.data.text) || '');
+        return getWorker().then(function (w) {
+          return w.recognize(canvas).then(function (r) {
+            var text = (r && r.data && r.data.text) || '';
+            // Si no apareció ningún importe, se prueba otra vez buscando texto suelto.
+            if (/s\/\s*\d|\$\s*\d|\d+[.,]\d{2}|\d\s*soles/i.test(text)) return text;
+            return w.setParameters({ tessedit_pageseg_mode: '11' }).then(function () {
+              return w.recognize(canvas);
+            }).then(function (r2) {
+              return w.setParameters({ tessedit_pageseg_mode: '3' }).then(function () {
+                return text + '\n' + ((r2 && r2.data && r2.data.text) || '');
+              });
+            });
+          });
+        });
+      }).then(function (text) {
+        return 'OK:' + text;
       }).catch(function (e) {
         return 'ERR:' + ((e && e.message) === 'script' ? 'LOAD' : 'FAILED');
       });
