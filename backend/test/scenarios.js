@@ -293,6 +293,26 @@ async function scenario(t,db,config,{faultInjection=false}={}) {
     assert.equal((await request('POST',path+'/ia/analizar?id='+randomUUID(),{texto:'Vendí 35 soles'},token())).status,422);
     const blocked=await request('POST',path+'/ia/analizar?id='+randomUUID(),{texto:'Vendí 35 soles'},token(),{'X-Finki-Consent':'1'});assert.equal(blocked.status,503);assert.equal(blocked.body.error.code,'AI_NOT_CONFIGURED');
   });
+  await t.test('gasto contado sin proveedor y pendiente trazable; General se reutiliza por tipo',async()=>{
+    for(const kind of ['VENTA','COMPRA_MERCADERIA','GASTO_OPERATIVO']) {
+      const before=(await db.read(s=>s.list('categorias',{negocio_id:bid,tipo:kind}))).filter(c=>c.nombre_normalizado==='general');
+      for(let i=0;i<2;i++) {
+        const id=randomUUID();
+        assert.equal((await cmd('REGISTRAR_OPERACION',{operacion:op(id,kind,null,'1200','CONTADO',null),pagos_iniciales:[{...mov('1200'),aplicacion_id:randomUUID()}]})).status,201);
+        const saved=(await request('GET',path+'/operaciones/'+id,undefined,token())).body;
+        assert.equal(saved.pendiente_minor,'0');assert.equal(saved.tercero_id,null);
+      }
+      const after=(await db.read(s=>s.list('categorias',{negocio_id:bid,tipo:kind}))).filter(c=>c.nombre_normalizado==='general');
+      assert.equal(after.length,1);if(before.length)assert.equal(after[0].id,before[0].id);
+    }
+    const id=randomUUID(),pending=op(id,'GASTO_OPERATIVO',null,'1200','CREDITO',null);
+    const missing=await cmd('REGISTRAR_OPERACION',{operacion:pending});assert.equal(missing.status,422);assert.equal(missing.body.error.code,'COUNTERPARTY_REQUIRED');
+    assert.equal(await db.read(s=>s.get('operaciones',{id})),null);
+    assert.equal((await cmd('REGISTRAR_OPERACION',{operacion:{...pending,tercero_id:ids.provider}})).status,201);
+    assert.equal((await settle(id,'500','REGISTRAR_PAGO')).status,201);
+    const saved=(await request('GET',path+'/operaciones/'+id,undefined,token())).body;
+    assert.equal(saved.tercero_id,ids.provider);assert.equal(saved.pendiente_minor,'700');
+  });
   await t.test('refresh rotativo, detección de reuso y logout',async()=>{
     const renewed=await request('POST','/auth/refresh',{refresh_token:alice.body.refresh_token});assert.equal(renewed.status,200);
     assert.equal((await request('GET','/auth/me',undefined,token())).status,401);

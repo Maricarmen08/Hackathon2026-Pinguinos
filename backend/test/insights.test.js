@@ -8,6 +8,16 @@ const moves=[{id:'m',estado:'CONFIRMADO',fecha_movimiento:'2026-10-23',monto_min
 const data=[ops,moves,[{operacion_id:'s',movimiento_id:'m',monto_minor:'4000'}],[],[]];
 const ask=q=>answer(b,data,q,[{id:'cat',nombre:'Servicios'}],[{id:'client',nombre:'Cliente Prueba'}],'2026-10-23');
 const suggestions=['¿Cuánto vendí hoy?','¿Cuánto vendí este mes?','¿En qué gasto más?','¿Cuánto gasté esta semana?','¿Cuánto me deben?','¿Vendí más que el mes pasado?','¿Cuánto dinero cobré esta semana?','¿Cuánto gasté en mercadería?','Mi resumen semanal'];
+test('resumen por bloques conserva importes, periodo y separación financiera',()=>{
+ const r=ask('Mi resumen semanal');
+ assert.equal(r.desde,'2026-10-19');assert.equal(r.hasta,'2026-10-23');
+ for(const line of ['Ventas: S/ 100.00','Gastos operativos: S/ 23.00','Compras de mercadería: S/ 80.00','Cobros de ventas: S/ 40.00','Pagos operativos: S/ 0.00','Por cobrar: S/ 110.00','Por pagar: S/ 103.00','Resultado simplificado: -S/ 3.00'])assert.ok(r.respuesta.split('\n').includes(line),line);
+ assert.match(r.respuesta,/Las compras y los gastos superan las ventas/);
+ assert.match(r.respuesta,/No es utilidad contable ni dinero disponible/);
+ assert.equal(r.indicadores.resultado_operativo_simplificado_minor,'-300');
+ const empty=answer(b,[[],[],[],[],[]],'resumen semanal',[],[],'2026-10-23');
+ assert.match(empty.respuesta,/No hay datos suficientes/);assert.equal(empty.indicadores.ventas_minor,'0');
+});
 for(const q of suggestions)test('sugerencia: '+q,()=>{const r=ask(q);assert.ok(r.respuesta);assert.equal(r.indicadores.negocio_id,'one');assert.equal(r.fuente,'REGISTROS');});
 for(const q of ['Dime mis ventas de esta semana','Mis ventas hoy','¿Cuánto he vendido hoy?'])test('ventas libres: '+q,()=>{const r=ask(q);assert.equal(r.indicadores.ventas_minor,'10000');assert.match(r.respuesta,/S\/ 100.00 en ventas/);});
 test('cobros semanales no recibe resumen de ventas, abono no duplica venta',()=>{const r=ask('Cuánto dinero cobré esta semana');assert.match(r.respuesta,/cobros de ventas S\/ 40.00/);assert.equal(r.indicadores.por_cobrar_minor,'11000');assert.equal(r.indicadores.ventas_minor,'10000');});
@@ -18,6 +28,17 @@ test('fechas calendario y rangos no inventados',()=>{assert.deepEqual(period('ay
 test('sin movimientos no fabrica causas ni recomendaciones',()=>{const r=answer(b,[[],[],[],[],[]],'Cómo va mi negocio',[],[],'2026-10-23');assert.equal(r.datos_suficientes,false);assert.match(r.respuesta,/No hay datos suficientes/);assert.match(ask('¿Por qué gasto más de lo que vendo?').respuesta,/no puedo determinar causas externas/);});
 test('sin proveedor ni cuota: respuestas deterministas y límites',()=>{for(const q of ['DROP TABLE usuarios','¿Qué clima hace?','¿Cuánto venderé mañana?','Dime mi contraseña'])assert.throws(()=>ask(q));assert.equal(ask('Ventas hoy').fuente,'REGISTROS');assert.equal(ask('Qué producto vendí más').datos_suficientes,false);});
 const {askAssistant}=require('../src/services/insights-assistant');
+test('resumen con ayuda externa conserva bloques y cifras deterministas',async()=>{
+ let calls=0;
+ const reads={ask:async(_bid,_actor,q)=>ask(q),questionPeriod:async()=>['2026-10-19','2026-10-23']};
+ const provider={classifyQuestion:async()=>{calls++;return 'RESUMEN';}};
+ await assert.rejects(askAssistant(reads,'one',{},'panorama semanal',false,provider));
+ assert.equal(calls,0);
+ const r=await askAssistant(reads,'one',{},'panorama semanal',true,provider);
+ assert.equal(calls,1);assert.equal(r.interpretacion_externa,true);
+ assert.equal(r.respuesta,ask('Mi resumen semanal').respuesta);
+ assert.deepEqual(r.indicadores,ask('Mi resumen semanal').indicadores);
+});
 test('respaldo solo con consentimiento; sin cifras externas ni elusión de permisos',async()=>{
   let calls=0;const unsupported=Object.assign(new Error('No soportada'),{code:'QUESTION_UNSUPPORTED'});
   const reads={ask:async(_b,_a,q)=>{if(q.startsWith('ventas del'))return {respuesta:'S/ 100.00',fuente:'REGISTROS'};throw unsupported;}};

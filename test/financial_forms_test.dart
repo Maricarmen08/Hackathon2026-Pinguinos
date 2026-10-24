@@ -7,6 +7,96 @@ import 'package:hackathon_pinguinos_mvp/v1/forms.dart';
 import 'widget_test.dart' show MemoryStore, session, json;
 
 void main() {
+  for (final kind in ['VENTA', 'COMPRA_MERCADERIA', 'GASTO_OPERATIVO']) {
+    testWidgets('$kind usa General sin elegir la primera categoría específica',
+        (tester) async {
+      Json? sent;
+      final api = ApiClient(
+          store: MemoryStore(),
+          client: MockClient((r) async {
+            sent = jsonDecode(r.body) as Json;
+            return json({'replayed': false}, 201);
+          }))
+        ..session = session();
+      await tester.pumpWidget(MaterialApp(
+          home: EntryForm(api: api, kind: kind, business: const {
+        'id': 'b'
+      }, accounts: const [
+        {'id': 'cash', 'nombre': 'Caja'}
+      ], categories: [
+        {'id': 'specific', 'nombre': 'Específica', 'tipo': kind}
+      ], people: const [])));
+      await tester.enterText(find.byType(TextFormField).at(0), 'Prueba');
+      await tester.enterText(find.byType(TextFormField).at(1), '12');
+      await tester.scrollUntilVisible(find.text('General'), 150,
+          scrollable: find.byType(Scrollable).first);
+      expect(find.text('Categoría'), findsOneWidget);
+      expect(find.text('General'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Revisar y guardar'), 200,
+          scrollable: find.byType(Scrollable).first);
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -240));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Revisar y guardar'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Confirmar'));
+      await tester.pumpAndSettle();
+      expect(sent?['payload']['operacion']['categoria_id'], isNull);
+      expect(sent?['payload']['operacion'].containsKey('tercero_id'), false);
+      expect(sent?['payload']['operacion']['condicion'], 'CONTADO');
+      expect(tester.takeException(), isNull);
+    });
+  }
+  testWidgets(
+      'gasto pendiente exige proveedor; pago completo elimina el requisito',
+      (tester) async {
+    Json? sent;
+    final api = ApiClient(
+        store: MemoryStore(),
+        client: MockClient((r) async {
+          sent = jsonDecode(r.body) as Json;
+          return json({'replayed': false}, 201);
+        }))
+      ..session = session();
+    await tester.pumpWidget(MaterialApp(
+        home: EntryForm(api: api, kind: 'GASTO_OPERATIVO', row: const {
+      'initial_mode': 'CREDITO'
+    }, business: const {
+      'id': 'b'
+    }, accounts: const [
+      {'id': 'cash', 'nombre': 'Caja'}
+    ], categories: const [], people: const [])));
+    expect(find.text('¿En qué gastaste?'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField).at(0), 'Luz');
+    await tester.enterText(find.byType(TextFormField).at(1), '12');
+    await tester.scrollUntilVisible(find.text('Revisar y guardar'), 200,
+        scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('Revisar y guardar'));
+    await tester.pumpAndSettle();
+    expect(sent, isNull);
+    await tester.scrollUntilVisible(
+        find.text('Elige un proveedor para registrar lo que queda por pagar.'),
+        -150,
+        scrollable: find.byType(Scrollable).first);
+    expect(
+        find.text('Elige un proveedor para registrar lo que queda por pagar.'),
+        findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Pendiente · sin pago'), -150,
+        scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('Pendiente · sin pago'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Pago completo').last);
+    await tester.pumpAndSettle();
+    expect(find.text('Proveedor'), findsNothing);
+    await tester.scrollUntilVisible(find.text('Revisar y guardar'), 200,
+        scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('Revisar y guardar'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirmar'));
+    await tester.pumpAndSettle();
+    expect(sent?['payload']['operacion']['condicion'], 'CONTADO');
+    expect(sent?['payload']['pagos_iniciales'][0]['monto_minor'], '1200');
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
       'venta parcial 100 con abono 40 conserva crédito y una sola venta',
       (tester) async {
@@ -83,6 +173,7 @@ void main() {
       await tester.tap(find.text('Confirmar'));
       await tester.pumpAndSettle();
       expect(sent?['payload']['operacion']['total_minor'], '1040');
+      expect(sent?['payload']['operacion']['categoria_id'], 'category');
       expect(sent?['payload']['operacion']['condicion'], 'CONTADO');
       expect(sent?['payload']['pagos_iniciales'][0]['monto_minor'], '1040');
       expect(
