@@ -49,7 +49,8 @@ class Database {
     this.config=config;
     this.pool=mysql.createPool({ host:config.DB_HOST,port:config.DB_PORT,user:config.DB_USER,password:config.DB_PASSWORD,database:config.DB_NAME,
       waitForConnections:true,connectionLimit:5,queueLimit:50,connectTimeout:5000,
-      supportBigNumbers:true,bigNumberStrings:true,dateStrings:true,decimalNumbers:false,jsonStrings:true,multipleStatements:false,charset:'utf8mb4' });
+      supportBigNumbers:true,bigNumberStrings:true,dateStrings:true,decimalNumbers:false,jsonStrings:true,multipleStatements:false,charset:'utf8mb4',
+      ...( !['127.0.0.1','localhost','::1'].includes(config.DB_HOST) ? { ssl: { rejectUnauthorized: false } } : {} ) });
   }
   async connection() {
     const c=await this.pool.getConnection();
