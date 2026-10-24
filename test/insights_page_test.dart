@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -7,6 +8,121 @@ import 'package:hackathon_pinguinos_mvp/v1/insights_page.dart';
 import 'widget_test.dart' show MemoryStore, json, session;
 
 void main() {
+  testWidgets(
+      'saludo sin autorización y aclaración con opciones conserva el periodo',
+      (t) async {
+    final posted = <Map<String, dynamic>>[];
+    final api = ApiClient(
+        store: MemoryStore(),
+        client: MockClient((r) async {
+          final body = jsonDecode(r.body) as Map<String, dynamic>;
+          posted.add(body);
+          if (body['pregunta'] == 'qué tal') {
+            return json({
+              'respuesta': '¡Hola! Soy Finki. ¿Qué quieres revisar?',
+              'fuente': 'ORIENTACION'
+            });
+          }
+          if (body['pregunta'] == 'cuánta plata hice ayer') {
+            return json({
+              'respuesta': '¿Quieres ver ventas o cobros?',
+              'fuente': 'ACLARACION',
+              'opciones': [
+                {
+                  'titulo': 'Ventas',
+                  'pregunta': 'ventas del 2026-10-22 al 2026-10-22'
+                },
+                {
+                  'titulo': 'Dinero cobrado',
+                  'pregunta': 'cobros del 2026-10-22 al 2026-10-22'
+                }
+              ]
+            });
+          }
+          return json(
+              {'respuesta': 'S/ 50.00 en cobros', 'fuente': 'REGISTROS'});
+        }))
+      ..session = session();
+    await t
+        .pumpWidget(MaterialApp(home: InsightsPage(api: api, businessId: 'a')));
+    await t.enterText(find.byType(TextField), 'qué tal');
+    await t.pump();
+    await t.tap(find.text('Consultar mis registros'));
+    await t.pumpAndSettle();
+    expect(find.text('Ayudarme a entender mi pregunta'), findsNothing);
+    expect(find.byType(CheckboxListTile), findsNothing);
+    await t.ensureVisible(find.byType(TextField));
+    await t.enterText(find.byType(TextField), 'cuánta plata hice ayer');
+    await t.pump();
+    await t.ensureVisible(find.text('Consultar mis registros'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Consultar mis registros'));
+    await t.pumpAndSettle();
+    await t.ensureVisible(find.text('Dinero cobrado'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Dinero cobrado'));
+    await t.pumpAndSettle();
+    expect(posted.last['pregunta'], 'cobros del 2026-10-22 al 2026-10-22');
+    expect(posted.any((b) => b['consentimiento_externo'] == true), false);
+    expect(t.takeException(), isNull);
+    api.client.close();
+  });
+  testWidgets(
+      'ayuda externa requiere autorizar en diálogo adaptable, cancelar no envía',
+      (t) async {
+    t.view.physicalSize = const Size(320, 720);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.resetPhysicalSize);
+    addTearDown(t.view.resetDevicePixelRatio);
+    final posted = <Map<String, dynamic>>[];
+    final api = ApiClient(
+        store: MemoryStore(),
+        client: MockClient((r) async {
+          final body = jsonDecode(r.body) as Map<String, dynamic>;
+          posted.add(body);
+          return body['consentimiento_externo'] == true
+              ? json({'respuesta': 'S/ 10.00 en ventas'})
+              : json({
+                  'error': {
+                    'code': 'QUESTION_UNSUPPORTED',
+                    'message': 'Puedes reformular tu pregunta.'
+                  }
+                }, 422);
+        }))
+      ..session = session();
+    await t.pumpWidget(MaterialApp(
+        builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: const TextScaler.linear(1.3)),
+            child: child!),
+        home: InsightsPage(api: api, businessId: 'a')));
+    await t.enterText(find.byType(TextField), 'Cuánto facturé hoy');
+    await t.pump();
+    await t.scrollUntilVisible(find.text('Consultar mis registros'), 150,
+        scrollable: find.byType(Scrollable).first);
+    await t.pumpAndSettle();
+    await t.tap(find.text('Consultar mis registros'));
+    await t.pumpAndSettle();
+    for (final authorize in [false, true]) {
+      await t.scrollUntilVisible(
+          find.text('Ayudarme a entender mi pregunta'), 150,
+          scrollable: find.byType(Scrollable).first);
+      await t.pumpAndSettle();
+      await t.tap(find.text('Ayudarme a entender mi pregunta'));
+      await t.pumpAndSettle();
+      expect(posted.length, 1);
+      final action =
+          find.text(authorize ? 'Autorizar y continuar' : 'Ahora no');
+      await t.ensureVisible(action);
+      await t.pumpAndSettle();
+      await t.tap(action);
+      await t.pumpAndSettle();
+    }
+    expect(posted.length, 2);
+    expect(posted.last['consentimiento_externo'], true);
+    expect(t.takeException(), isNull);
+    api.client.close();
+  });
   testWidgets('resumen con saltos de línea legible a 320 px y texto ampliado',
       (t) async {
     t.view.physicalSize = const Size(320, 700);
@@ -32,7 +148,8 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.text('Consultar mis registros'));
     await t.pumpAndSettle();
-    expect(t.widget<SelectableText>(find.byType(SelectableText)).data, response);
+    expect(
+        t.widget<SelectableText>(find.byType(SelectableText)).data, response);
     await t.scrollUntilVisible(
         find.text('Fuente: registros del negocio seleccionado.'), 180,
         scrollable: find.byType(Scrollable).first);

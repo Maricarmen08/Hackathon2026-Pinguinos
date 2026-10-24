@@ -42,7 +42,7 @@ test('resumen con ayuda externa conserva bloques y cifras deterministas',async()
 test('respaldo solo con consentimiento; sin cifras externas ni elusión de permisos',async()=>{
   let calls=0;const unsupported=Object.assign(new Error('No soportada'),{code:'QUESTION_UNSUPPORTED'});
   const reads={ask:async(_b,_a,q)=>{if(q.startsWith('ventas del'))return {respuesta:'S/ 100.00',fuente:'REGISTROS'};throw unsupported;}};
-  const provider={classifyQuestion:async q=>{calls++;assert.equal(q,'Cuánto facturé');return 'VENTAS';}};
+  const provider={classifyQuestion:async q=>{calls++;assert.equal(q,'cuanto facture');return 'VENTAS';}};
   await assert.rejects(askAssistant(reads,'a',{},'Cuánto facturé',false,provider));assert.equal(calls,0);
   const r=await askAssistant(reads,'a',{},'Cuánto facturé',true,provider);assert.equal(r.respuesta,'S/ 100.00');assert.equal(r.interpretacion_externa,true);assert.equal(calls,1);
   const denied={ask:async()=>{throw Object.assign(new Error('No autorizado'),{code:'BUSINESS_FORBIDDEN'});}};
