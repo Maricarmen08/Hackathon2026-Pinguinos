@@ -13,6 +13,21 @@ class PcmRecording {
     }
 }
 
+/** Sube un audio bajo (micrófonos suaves) antes de reconocerlo. Máximo 6x, sin recortar; el silencio no se amplifica. */
+fun normalizePcm(pcm: ShortArray, count: Int, target: Int = 20000, maxGain: Float = 6f) {
+    var peak = 0
+    for (i in 0 until count) {
+        val a = Math.abs(pcm[i].toInt())
+        if (a > peak) peak = a
+    }
+    if (peak < 300) return
+    val gain = minOf(maxGain, target.toFloat() / peak)
+    if (gain <= 1.05f) return
+    for (i in 0 until count) {
+        pcm[i] = (pcm[i] * gain).toInt().coerceIn(-32768, 32767).toShort()
+    }
+}
+
 interface PcmDecoder {
     fun accept(chunk: ShortArray, count: Int): Boolean
     fun segment(): String

@@ -1,3 +1,19 @@
+import 'countries.dart';
+
+/// Símbolo y huso horario del negocio activo. Por defecto Perú, como antes.
+String currencySymbol = 'S/';
+int utcOffsetHours = -5;
+
+String get currencyWord => (countryByCurrency(_currency) ?? kCountries.first).currencyWord;
+String? _currency = 'PEN';
+
+void useBusinessCurrency(Map<String, dynamic>? business) {
+  _currency = business?['moneda']?.toString() ?? 'PEN';
+  final country = countryByCurrency(_currency);
+  currencySymbol = country?.symbol ?? 'S/';
+  utcOffsetHours = country?.utcOffset ?? -5;
+}
+
 String toMinor(String input, {bool zero = false}) {
   final value = input.trim().replaceAll(',', '.');
   if (!RegExp(r'^\d{1,13}(\.\d{1,2})?$').hasMatch(value)) {
@@ -22,11 +38,11 @@ String soles(Object? minor) {
   final integer = (a ~/ BigInt.from(100))
       .toString()
       .replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
-  return '${n.isNegative ? '-' : ''}S/ $integer.${(a % BigInt.from(100)).toString().padLeft(2, '0')}';
+  return '${n.isNegative ? '-' : ''}$currencySymbol $integer.${(a % BigInt.from(100)).toString().padLeft(2, '0')}';
 }
 
 String limaToday() => DateTime.now()
     .toUtc()
-    .subtract(const Duration(hours: 5))
+    .add(Duration(hours: utcOffsetHours))
     .toIso8601String()
     .substring(0, 10);

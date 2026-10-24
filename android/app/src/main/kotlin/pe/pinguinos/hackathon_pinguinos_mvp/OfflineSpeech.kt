@@ -105,6 +105,7 @@ class OfflineSpeech(private val context: Context) {
                 }
                 recorder.stop(); recorder.release(); audio = null
                 main.post { if (!closed && token == generation.get()) processing() }
+                normalizePcm(pcm.samples, pcm.count)
                 val decoder = Recognizer(loaded, PcmRecording.RATE.toFloat())
                 recognizer = decoder
                 val decoded = decodePcm(pcm.samples, pcm.count, VoskPcmDecoder(decoder)) {

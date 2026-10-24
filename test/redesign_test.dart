@@ -102,7 +102,7 @@ void main() {
       }
       await tester.enterText(
           find.widgetWithText(
-              TextFormField, register ? 'Celular peruano' : 'Teléfono o correo electrónico'),
+              TextFormField, register ? 'Celular' : 'Teléfono o correo electrónico'),
           '999999999');
       await tester.enterText(find.widgetWithText(TextFormField, 'Contraseña'),
           'clave-solo-prueba-visual');
