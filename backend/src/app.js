@@ -57,6 +57,12 @@ function createApp({db,config}) {
   router.post('/auth/refresh',limiter,wrap(async(req,res)=>res.json(await auth.refresh(v.refresh.parse(req.body).refresh_token))));
   router.post('/auth/logout',secured,wrap(async(req,res)=>res.json(await auth.logout(req.actor))));
   router.get('/auth/me',secured,wrap(async(req,res)=>res.json(await auth.me(req.actor))));
+  const google=require('./services/google-auth');
+  const googleAuth=google.googleAuthService(db,auth,google.googleVerifier(config));
+  const googleInput=zGoogle=>require('zod').z.object(zGoogle).strict();
+  const googleBase={id_token:require('zod').z.string().min(20).max(8192),nonce:require('zod').z.string().min(32).max(128)};
+  router.post('/auth/google',limiter,wrap(async(req,res)=>res.json(await googleAuth.login(googleInput({...googleBase,dispositivo:require('./validators').device}).parse(req.body)))));
+  router.post('/perfil/google',secured,limiter,wrap(async(req,res)=>res.json(await googleAuth.link(req.actor,googleInput({...googleBase,clave_actual:require('zod').z.string().min(1).max(128)}).parse(req.body)))));
   router.get('/perfil',secured,wrap(async(req,res)=>res.json(await auth.me(req.actor))));
   router.patch('/perfil',secured,wrap(async(req,res)=>res.json(await auth.updateProfile(req.actor,v.profile.parse(req.body)))));
   const accountLimit=rateLimit({windowMs:15*60000,limit:5,keyGenerator:req=>req.actor.sub,standardHeaders:'draft-8',legacyHeaders:false,

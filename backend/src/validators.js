@@ -55,4 +55,4 @@ const filters = z.object({
   offset: z.coerce.number().int().min(0).max(10000).default(0),
   direccion: z.enum(['COBRAR','PAGAR']).optional(), estado: z.enum(['CONFIRMADO','ANULADO']).optional()
 }).strict().refine(v => !v.desde || !v.hasta || v.desde <= v.hasta, 'Período invertido');
-module.exports = { uuid, register, login, refresh, business, command, filters, date, profile, changePassword };
+module.exports = { device, uuid, register, login, refresh, business, command, filters, date, profile, changePassword };

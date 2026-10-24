@@ -79,6 +79,7 @@ class Database {
       assertDatabaseCredentials(this.config, r.account.split('@')[0]);
       const [rows]=await c.query('SELECT version,nombre FROM schema_migraciones ORDER BY version');
       if (!rows.some(x=>x.version===1&&x.nombre==='001_initial_schema.sql') || !rows.some(x=>x.version===2&&x.nombre==='002_reporting_views.sql')) throw new Error('Missing migrations');
+      if(this.config.GOOGLE_AUTH_ENABLED&&!rows.some(x=>x.version===3&&x.nombre==='003_google_identity.sql'))throw new Error('Google authentication requires migration 003');
       return true;
     } finally { c.release(); }
   }

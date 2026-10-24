@@ -62,7 +62,7 @@ de actualizar; no uses reset, clean ni sobrescribas tu trabajo.
 ## 4. Importar la base de datos (un solo archivo)
 
 El archivo oficial es **`database/hackathon_pinguinos_dev.sql`**. Crea la base
-`hackathon_pinguinos_dev` con sus 23 tablas, 5 vistas, relaciones e índices.
+`hackathon_pinguinos_dev` con sus 24 tablas, 5 vistas, relaciones e índices.
 No trae usuarios ni datos.
 
 **Con HeidiSQL:**
@@ -86,7 +86,7 @@ Comprueba en HeidiSQL:
 ```sql
 SELECT table_type, COUNT(*) FROM information_schema.tables
 WHERE table_schema = 'hackathon_pinguinos_dev' GROUP BY table_type;
--- BASE TABLE 23 · VIEW 5
+-- BASE TABLE 24 · VIEW 5
 ```
 
 > Si aparece **«Can't create database … database exists» (error 1007)**, ya
@@ -279,9 +279,13 @@ conserva para inspección; contiene solo datos de ensayo.
 | Mensaje | Solución |
 |---|---|
 | `database exists` (1007) al importar | Ya tienes la base. No la borres; usa la que tienes. |
-| `Missing migrations` al iniciar | Importaste otro SQL. Revisa que `schema_migraciones` tenga las versiones 1 y 2. |
+| `Missing migrations` al iniciar | Importaste otro SQL. Revisa que `schema_migraciones` tenga las versiones 1, 2 y 3. |
 | `Unsupported database configuration` | MySQL no es 8.4 o `DB_NAME` no coincide. |
 | `root o contraseña vacía requieren …` | Usa el usuario del paso 5, o deja `NODE_ENV=development` y `HOST=127.0.0.1`. |
 | La app web no conecta (CORS) | Ejecuta Flutter con `--web-port=5173` y deja `CORS_ORIGINS=http://localhost:5173`. |
 | El teléfono no conecta | Repite `adb reverse tcp:3000 tcp:3000` y verifica que Express siga abierto. |
 | Falta el modelo offline o falla su hash | Confirma que clonaste la versión publicada de `danny` y que el ZIP tiene el tamaño/hash indicados; no sustituyas el modelo por otro. |
+
+## Acceso adicional con Google
+
+Preparado pero deshabilitado hasta configurar OAuth y aplicar la migración 003. Ver [GOOGLE_SIGN_IN_FINKI.md](GOOGLE_SIGN_IN_FINKI.md). El SQL único actualizado instala las tres versiones en una base nueva; no reimportarlo sobre datos existentes. El registro tradicional sigue disponible.

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'daily_sales.dart';
+import 'google_access.dart';
 import 'api_client.dart';
 import 'money.dart';
 import 'presentation.dart';
@@ -291,6 +292,7 @@ class _AuthPageState extends State<AuthPage> {
                       child: Text(register
                           ? 'Ya tengo cuenta'
                           : 'Soy nuevo · Registrarme')),
+                  GoogleAccess(api: widget.api),
                 ])),
       );
 
@@ -335,6 +337,7 @@ class _AuthPageState extends State<AuthPage> {
                               register = false;
                             }),
                         child: const Text('Ya tengo cuenta'))),
+                GoogleAccess(api: widget.api),
                 const SizedBox(height: 24),
                 const Text('FINKI · A tu lado, cada día.',
                     style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
@@ -385,6 +388,7 @@ class _BusinessHomeState extends State<BusinessHome>
   DailySales? dailySales;
   bool dailyCached = false;
   Timer? dailyTimer;
+  bool googleBusinessPrompted = false;
   bool loading = true;
   Object? error;
   int tab = 0;
@@ -458,6 +462,18 @@ class _BusinessHomeState extends State<BusinessHome>
       error = e;
     }
     if (mounted) setState(() => loading = false);
+    if (mounted &&
+        error == null &&
+        business == null &&
+        api.session?['metodo_acceso'] == 'GOOGLE' &&
+        !googleBusinessPrompted) {
+      googleBusinessPrompted = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+          openForm('business');
+        }
+      });
+    }
   }
 
   Future<void> loadDailySales() async {
@@ -1005,7 +1021,9 @@ class _BusinessHomeState extends State<BusinessHome>
                         Text(profile?['nombre'] ?? '',
                             style: Theme.of(context).textTheme.titleLarge),
                         if (profile?['telefono'] != null)
-                          Text(profile!['telefono'] as String),
+                          Text(profile!['telefono'] as String? ??
+                              profile!['correo'] as String? ??
+                              'Acceso con Google'),
                         if (profile?['correo'] != null)
                           Text(profile!['correo'] as String),
                       ])),
@@ -1055,14 +1073,21 @@ class _BusinessHomeState extends State<BusinessHome>
             child: Column(children: [
           ListTile(
               leading: const Icon(Icons.lock_outline),
-              title: const Text('Cambiar contraseña'),
+              title: Text(profile?['tiene_clave'] == false
+                  ? 'Acceso con Google'
+                  : 'Cambiar contraseña'),
               subtitle: Text(api.offline
                   ? 'Disponible al conectarte'
-                  : 'Protege tu acceso a FINKI'),
+                  : profile?['tiene_clave'] == false
+                      ? 'Entra con tu cuenta Google; no necesitas contraseña'
+                      : 'Protege tu acceso a FINKI'),
               trailing: const Icon(Icons.chevron_right),
               onTap: api.offline || api.writing
                   ? null
-                  : () => accountPage(AccountSecurityPage(api: api),
+                  : () => accountPage(
+                      AccountSecurityPage(
+                          api: api,
+                          hasPassword: profile?['tiene_clave'] as bool?),
                       'Contraseña actualizada. Las demás sesiones se cerraron.')),
           const Divider(height: 1, indent: 20, endIndent: 20),
           ListTile(

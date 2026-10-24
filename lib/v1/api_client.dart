@@ -81,8 +81,12 @@ class ApiClient extends ChangeNotifier {
     }
   }
 
-  Future<void> _save(Json value) async {
-    final next = <String, dynamic>{...?session, ...value};
+  Future<void> _save(Json value, {String? accessMethod}) async {
+    final next = <String, dynamic>{
+      ...?session,
+      ...value,
+      if (accessMethod != null) 'metodo_acceso': accessMethod
+    };
     await store.write('session', jsonEncode(next));
     session = next;
     notifyListeners();
@@ -192,15 +196,17 @@ class ApiClient extends ChangeNotifier {
   }
 
   Future<void> authenticate(bool register, Json input) async {
-    await _save(await _send('POST', register ? '/auth/registro' : '/auth/login',
-        body: {
-          ...input,
-          'dispositivo': {
-            'nombre': kIsWeb ? 'FINKI Chrome' : 'FINKI Android',
-            'plataforma': kIsWeb ? 'WEB' : 'ANDROID'
-          }
-        },
-        auth: false));
+    await _save(
+        await _send('POST', register ? '/auth/registro' : '/auth/login',
+            body: {
+              ...input,
+              'dispositivo': {
+                'nombre': kIsWeb ? 'FINKI Chrome' : 'FINKI Android',
+                'plataforma': kIsWeb ? 'WEB' : 'ANDROID'
+              }
+            },
+            auth: false),
+        accessMethod: 'TRADICIONAL');
   }
 
   Future<void> logout() async {
@@ -210,6 +216,27 @@ class ApiClient extends ChangeNotifier {
     }
     await request('POST', '/auth/logout');
     await forget();
+  }
+
+  Future<void> authenticateGoogle(String token, String nonce,
+      {String? password}) async {
+    if (password != null) {
+      await request('POST', '/perfil/google',
+          body: {'id_token': token, 'nonce': nonce, 'clave_actual': password});
+      return;
+    }
+    await _save(
+        await _send('POST', '/auth/google',
+            body: {
+              'id_token': token,
+              'nonce': nonce,
+              'dispositivo': {
+                'nombre': kIsWeb ? 'FINKI Web' : 'FINKI Android',
+                'plataforma': kIsWeb ? 'WEB' : 'ANDROID'
+              }
+            },
+            auth: false),
+        accessMethod: 'GOOGLE');
   }
 
   Future<Json> command(String path, String type, Json payload) async {

@@ -1,6 +1,7 @@
 'use strict';
 // Allowlist física de la migración aprobada; nunca recibe identificadores del cliente.
 module.exports = {
+ "identidades_externas": ["id","usuario_id","proveedor","sujeto","correo_proveedor","correo_verificado","ultimo_token_iat","creado_en","ultimo_acceso_en"],
   "schema_migraciones": [
     "version",
     "nombre",
@@ -18,6 +19,7 @@ module.exports = {
     "telefono_normalizado",
     "correo_normalizado",
     "password_hash",
+    "acceso_google",
     "estado",
     "creado_en",
     "actualizado_en",

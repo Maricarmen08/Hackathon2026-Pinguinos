@@ -3,9 +3,9 @@
 -- Archivo oficial: database/hackathon_pinguinos_dev.sql
 --
 -- Crea DESDE CERO la base hackathon_pinguinos_dev con la estructura final:
---   23 tablas, 5 vistas, claves foráneas, índices y restricciones CHECK.
--- Equivale a las migraciones 001_initial_schema.sql + 002_reporting_views.sql
--- (generado a partir de su DDL, sin cambios) y registra ambas versiones en
+--   24 tablas, 5 vistas, claves foráneas, índices y restricciones CHECK.
+-- Equivale a 001_initial_schema.sql + 002_reporting_views.sql + 003_google_identity.sql
+-- Incluye los ajustes de 003 y registra las tres versiones en
 -- schema_migraciones, como exige el backend al iniciar.
 --
 -- NO contiene usuarios, contraseñas, sesiones, negocios, datos financieros
@@ -54,9 +54,10 @@ CREATE TABLE schema_semillas (
 CREATE TABLE usuarios (
   id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   nombre VARCHAR(120) NOT NULL,
-  telefono_normalizado VARCHAR(20) NOT NULL,
+  telefono_normalizado VARCHAR(20) NULL,
   correo_normalizado VARCHAR(254) NULL,
   password_hash VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  acceso_google BOOLEAN NOT NULL DEFAULT FALSE,
   estado VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'ACTIVO',
   creado_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   actualizado_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -66,7 +67,8 @@ CREATE TABLE usuarios (
   UNIQUE KEY uq_usuarios_telefono (telefono_normalizado),
   UNIQUE KEY uq_usuarios_correo (correo_normalizado),
   CONSTRAINT ck_usuarios_estado CHECK (estado IN ('ACTIVO', 'BLOQUEADO')),
-  CONSTRAINT ck_usuarios_hash CHECK ((estado = 'BLOQUEADO' AND password_hash IS NULL) OR (password_hash IS NOT NULL AND (password_hash LIKE '$argon2id$%' OR password_hash LIKE '$scrypt$%'))),
+  CONSTRAINT ck_usuarios_hash CHECK (password_hash IS NULL OR password_hash LIKE '$argon2id$%' OR password_hash LIKE '$scrypt$%'),
+  CONSTRAINT ck_usuarios_metodo CHECK (estado='BLOQUEADO' OR (password_hash IS NOT NULL AND telefono_normalizado IS NOT NULL) OR acceso_google=1),
   CONSTRAINT ck_usuarios_nombre CHECK (CHAR_LENGTH(TRIM(nombre)) > 0),
   CONSTRAINT ck_usuarios_version CHECK (version >= 1)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -704,4 +706,27 @@ INSERT INTO schema_migraciones (version,nombre,contrato_version) VALUES
 -- Fin. Comprobación rápida:
 --   SELECT table_type, COUNT(*) FROM information_schema.tables
 --   WHERE table_schema='hackathon_pinguinos_dev' GROUP BY table_type;
---   -> BASE TABLE 23, VIEW 5
+--   -> BASE TABLE 24, VIEW 5
+
+-- Google identity support; no Google credentials or users are seeded.
+CREATE TABLE identidades_externas (
+    id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    usuario_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    proveedor VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    sujeto VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    correo_proveedor VARCHAR(254) NULL,
+    correo_verificado BOOLEAN NOT NULL,
+    ultimo_token_iat BIGINT NOT NULL,
+    creado_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    ultimo_acceso_en DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_identidad_sujeto (proveedor,sujeto),
+    UNIQUE KEY uq_identidad_usuario (usuario_id,proveedor),
+    CONSTRAINT fk_identidad_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+    CONSTRAINT ck_identidad_uuid CHECK (CHAR_LENGTH(id)=36 AND SUBSTRING(id,9,1)='-' AND SUBSTRING(id,14,1)='-' AND SUBSTRING(id,19,1)='-' AND SUBSTRING(id,24,1)='-'),
+    CONSTRAINT ck_identidad_proveedor CHECK (proveedor='GOOGLE'),
+    CONSTRAINT ck_identidad_sujeto CHECK (CHAR_LENGTH(TRIM(sujeto))>0),
+    CONSTRAINT ck_identidad_correo CHECK (correo_verificado=1),
+    CONSTRAINT ck_identidad_iat CHECK (ultimo_token_iat>0)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+INSERT INTO schema_migraciones(version,nombre,contrato_version) VALUES(3,'003_google_identity.sql','1.1.0');
