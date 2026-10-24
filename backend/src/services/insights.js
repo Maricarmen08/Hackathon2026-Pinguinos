@@ -36,7 +36,27 @@ function answer(business,data,question,categories=[],people=[],asOf=businessToda
     const days=Math.round((Date.parse(to)-Date.parse(from))/86400000)+1,a=shift(from,-days),b=shift(from,-1),prev=report(a,b);
     return result(`${prefix}ventas ${soles(r.ventas_minor)}; periodo anterior de igual duración (${a} al ${b}), ${soles(prev.ventas_minor)}. Diferencia ${soles((BigInt(r.ventas_minor)-BigInt(prev.ventas_minor)).toString())}. ${a<business.inicio_historial?'No hay cobertura completa del periodo anterior.':'Son registros, no una predicción.'}`,{comparacion:prev,datos_suficientes:sufficient&&a>=business.inicio_historial});
   }
-  if(/por que|recom|consej|como va|como esta|resumen|balance|resultado/.test(q))return result(`${prefix}ventas ${soles(r.ventas_minor)}, gastos operativos ${soles(r.gastos_minor)} y compras ${soles(r.compras_minor)}; cobros de ventas ${soles(r.cobros_ventas_minor)} y pagos operativos ${soles(r.pagos_operativos_minor)}. Al ${to} te deben ${soles(r.por_cobrar_minor)} y debes ${soles(r.por_pagar_minor)}. Resultado simplificado ${soles(r.resultado_operativo_simplificado_minor)}: ventas menos compras y gastos; no utilidad contable ni efectivo disponible. `+(!sufficient?'No hay datos suficientes para recomendar cambios.':BigInt(r.resultado_operativo_simplificado_minor)<0n?'Compras y gastos superan las ventas registradas. Revisa categorías y periodos; no puedo determinar causas externas ni pérdidas contables.':'Revisa pendientes y completa los registros para evaluar tendencias; no puedo predecir ingresos.'));
+  if(/por que|recom|consej|como va|como esta|resumen|balance|resultado/.test(q))return result([
+    `Resumen de tu negocio · ${label}`,
+    '',
+    'Actividad del periodo',
+    `Ventas: ${soles(r.ventas_minor)}`,
+    `Gastos operativos: ${soles(r.gastos_minor)}`,
+    `Compras de mercadería: ${soles(r.compras_minor)}`,
+    '',
+    'Dinero cobrado y pagado',
+    `Cobros de ventas: ${soles(r.cobros_ventas_minor)}`,
+    `Pagos operativos: ${soles(r.pagos_operativos_minor)}`,
+    'Los cobros y pagos no crean nuevas ventas, gastos ni compras.',
+    '',
+    `Deudas al ${day(to)}`,
+    `Por cobrar: ${soles(r.por_cobrar_minor)}`,
+    `Por pagar: ${soles(r.por_pagar_minor)}`,
+    '',
+    `Resultado simplificado: ${soles(r.resultado_operativo_simplificado_minor)}`,
+    'Ventas menos compras y gastos. No es utilidad contable ni dinero disponible.',
+    !sufficient?'No hay datos suficientes para recomendar cambios.':BigInt(r.resultado_operativo_simplificado_minor)<0n?'Las compras y los gastos superan las ventas registradas; no puedo determinar causas externas ni pérdidas contables.':''
+  ].filter((line,index,lines)=>line!==''||index<lines.length-1).join('\n'));
   if(/(en que|mayor|mas).*gast|gast.*(categoria|mas)/.test(q)){
     const groups=new Map();for(const o of rows.filter(o=>o.tipo==='GASTO_OPERATIVO'))groups.set(o.categoria_id,(groups.get(o.categoria_id)||0n)+BigInt(o.total_minor));
     const cats=[...groups].sort((a,b)=>a[1]===b[1]?0:a[1]>b[1]?-1:1).map(([id,n])=>({nombre:categories.find(c=>c.id===id)?.nombre||'General',monto_minor:n.toString()}));

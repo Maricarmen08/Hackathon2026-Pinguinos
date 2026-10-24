@@ -8,6 +8,31 @@ abstract final class FinkiSpace {
   static const double contentWidth = 640, formWidth = 480, radius = 20;
 }
 
+/// Field guidance grows with the text and leaves room for the next floating label.
+class FinkiFieldHelp extends StatelessWidget {
+  final String text;
+  const FinkiFieldHelp(this.text, {super.key});
+  @override
+  Widget build(BuildContext context) => Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 24),
+      child: Text(text,
+          softWrap: true,
+          style: const TextStyle(
+              fontSize: 14, height: 1.45, color: AppTheme.textMuted)));
+}
+
+class FinkiFieldError extends StatelessWidget {
+  final String text;
+  const FinkiFieldError(this.text, {super.key});
+  @override
+  Widget build(BuildContext context) => Text(text,
+      softWrap: true,
+      style: TextStyle(
+          fontSize: 14,
+          height: 1.45,
+          color: Theme.of(context).colorScheme.error));
+}
+
 class FinkiMoneyCard extends StatelessWidget {
   final String label, value;
   final IconData icon;
@@ -226,6 +251,7 @@ class FinkiButton extends StatelessWidget {
 /// Native Flutter selection keeps keyboard/touch support and form validation.
 class FinkiSelect extends StatelessWidget {
   final String label;
+  final String? validationMessage;
   final String? value;
   final List<DropdownMenuItem<String>> items;
   final ValueChanged<String?>? onChanged;
@@ -236,6 +262,7 @@ class FinkiSelect extends StatelessWidget {
       required this.value,
       required this.items,
       required this.onChanged,
+      this.validationMessage,
       this.required = true});
   double _menuHeight(BuildContext context) {
     // Scaffold removes keyboard insets from its body MediaQuery after resizing.
@@ -289,9 +316,10 @@ class FinkiSelect extends StatelessWidget {
           icon: const Icon(Icons.keyboard_arrow_down_rounded),
           itemHeight: null,
           decoration: InputDecoration(labelText: label),
+          errorBuilder: (context, error) => FinkiFieldError(error),
           onChanged: onChanged,
           validator: (v) =>
               required && (v == null || !items.any((item) => item.value == v))
-                  ? 'Selecciona una opción válida'
+                  ? validationMessage ?? 'Selecciona una opción válida'
                   : null));
 }

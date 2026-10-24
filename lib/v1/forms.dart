@@ -72,7 +72,9 @@ class _EntryFormState extends State<EntryForm> {
     }
     if (operation && widget.row?['initial_mode'] == 'CREDITO') mode = 'CREDITO';
     category = widget.categories
-        .where((c) => c['tipo'] == kind)
+        .where((c) =>
+            c['tipo'] == kind &&
+            c['nombre'].toString().trim().toLowerCase() == 'general')
         .firstOrNull?['id'] as String?;
     account = widget.accounts.firstOrNull?['id'] as String?;
     final proposal = widget.row?['proposal'] as Map?;
@@ -196,6 +198,7 @@ class _EntryFormState extends State<EntryForm> {
                   prefixText: money ? 'S/ ' : null,
                   counterText: '',
                   hintText: money ? '0.00' : null),
+              errorBuilder: (context, error) => FinkiFieldError(error),
               validator: (v) {
                 if (required && v!.trim().isEmpty) return 'Completa este campo';
                 if (c == extra &&
@@ -215,13 +218,15 @@ class _EntryFormState extends State<EntryForm> {
               }));
   Widget select(String label, String? value,
           List<DropdownMenuItem<String>> items, ValueChanged<String?> update,
-          {bool required = true}) =>
+          {bool required = true, String? validationMessage}) =>
       Padding(
+          key: ValueKey(label),
           padding: const EdgeInsets.only(bottom: 16),
           child: FinkiSelect(
               value: value,
               label: label,
               required: required,
+              validationMessage: validationMessage,
               items: items,
               onChanged: busy
                   ? null
@@ -262,6 +267,7 @@ class _EntryFormState extends State<EntryForm> {
           key: ValueKey('date-${date.text}'),
           initialValue: dateEs(date.text),
           readOnly: true,
+          errorBuilder: (context, error) => FinkiFieldError(error),
           validator: (_) => DateTime.parse(date.text).isBefore(earliestDate) ||
                   date.text.compareTo(limaToday()) > 0
               ? 'Elige una fecha dentro del historial y no futura.'
@@ -536,7 +542,9 @@ class _EntryFormState extends State<EntryForm> {
                                     text(
                                         name,
                                         operation
-                                            ? '¿Qué vendiste o pagaste?'
+                                            ? kind == 'GASTO_OPERATIVO'
+                                                ? '¿En qué gastaste?'
+                                                : '¿Qué vendiste o pagaste?'
                                             : 'Nombre',
                                         max: operation
                                             ? 240
@@ -563,9 +571,8 @@ class _EntryFormState extends State<EntryForm> {
                                         }),
                                         (v) =>
                                             setState(() => accountType = v!)),
-                                    const Text(
+                                    const FinkiFieldHelp(
                                         'La cuenta empieza con saldo S/ 0.00. No se crea ningún ingreso inicial.'),
-                                    const SizedBox(height: 16),
                                   ],
                                   if (kind == 'category')
                                     select(
@@ -619,17 +626,30 @@ class _EntryFormState extends State<EntryForm> {
                                     ],
                                     select(
                                         'Categoría',
-                                        category,
-                                        options(widget.categories
-                                            .where((c) => c['tipo'] == kind)
-                                            .toList()),
-                                        (v) => setState(() => category = v),
+                                        category ?? '',
+                                        [
+                                          if (!widget.categories.any((c) =>
+                                              c['tipo'] == kind &&
+                                              c['nombre']
+                                                      .toString()
+                                                      .trim()
+                                                      .toLowerCase() ==
+                                                  'general'))
+                                            const DropdownMenuItem(
+                                                value: '',
+                                                child: Text('General')),
+                                          ...options(widget.categories
+                                              .where((c) => c['tipo'] == kind)
+                                              .toList()),
+                                        ],
+                                        (v) => setState(() =>
+                                            category = v == '' ? null : v),
                                         required: false),
                                     if (widget.categories
                                         .where((c) => c['tipo'] == kind)
                                         .isEmpty)
-                                      const Text(
-                                          'La categoría es opcional. Puedes crear una desde Inicio.'),
+                                      const FinkiFieldHelp(
+                                          'Sin una categoría específica se usará General. Puedes crear categorías desde Inicio.'),
                                     select(
                                         '¿Cómo se paga?',
                                         mode,
@@ -648,10 +668,17 @@ class _EntryFormState extends State<EntryForm> {
                                               : 'Proveedor',
                                           person,
                                           options(widget.people),
-                                          (v) => setState(() => person = v)),
+                                          (v) => setState(() => person = v),
+                                          validationMessage: kind == 'VENTA'
+                                              ? 'Elige un cliente para registrar el fiado.'
+                                              : 'Elige un proveedor para registrar lo que queda por pagar.'),
+                                    if (kind == 'GASTO_OPERATIVO')
+                                      FinkiFieldHelp(mode == 'CONTADO'
+                                          ? 'Pago completo: no necesitas proveedor.'
+                                          : 'Si queda un pago pendiente, selecciona un proveedor. Si ya pagaste, elige Pago completo.'),
                                     if (mode != 'CONTADO' &&
                                         widget.people.isEmpty)
-                                      const Text(
+                                      const FinkiFieldHelp(
                                           'Primero registra un cliente o proveedor desde Inicio.'),
                                     if (mode == 'PARCIAL')
                                       text(partial, 'Abono inicial',
@@ -669,7 +696,7 @@ class _EntryFormState extends State<EntryForm> {
                                         required: !(widget.accounts.isEmpty &&
                                             channel == 'EFECTIVO')),
                                     if (widget.accounts.isEmpty)
-                                      const Text(
+                                      const FinkiFieldHelp(
                                           'Si cobras o pagas en efectivo, Finki preparará tu cuenta con saldo inicial cero. Para Yape, Plin o banco elige primero una cuenta desde Inicio.'),
                                     select(
                                         'Medio de pago',
