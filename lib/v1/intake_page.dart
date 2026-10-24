@@ -66,7 +66,7 @@ class _IntakePageState extends State<IntakePage> {
   String? extractionId;
   bool recording = false, busy = false, consent = false;
   bool hasEvidence = false;
-  bool picking = false, transcript = false;
+  bool picking = false, pickerOpen = false, transcript = false;
   bool analyzingImage = false;
   int seconds = 0;
   String? error, analysisKey, analysisId;
@@ -359,19 +359,34 @@ class _IntakePageState extends State<IntakePage> {
   }
 
   Future<void> photo(ImageSource origin, {bool replaceCurrent = false}) async {
-    if (busy || recording || picking) return;
-    setState(() {
-      picking = true;
-      error = null;
-    });
+    if (busy || recording || picking || pickerOpen) return;
+    setState(() => error = null);
+    // En la web, si se cierra el selector sin elegir, el navegador puede no
+    // avisar: por eso la pantalla no se bloquea mientras el selector está abierto.
+    pickerOpen = true;
+    XFile? chosen;
     try {
       // Keep original resolution/quality and EXIF; no crop or resize is requested.
-      final file = widget.pickImage != null
-          ? await widget.pickImage!(origin)
-          : await ImagePicker()
-              .pickImage(source: origin, requestFullMetadata: false);
-      if (file == null || !mounted) return;
-      setState(() => analyzingImage = true);
+      final pending = widget.pickImage != null
+          ? widget.pickImage!(origin)
+          : ImagePicker().pickImage(source: origin, requestFullMetadata: false);
+      chosen = await pending.timeout(const Duration(minutes: 5),
+          onTimeout: () => null);
+    } catch (_) {
+      if (mounted) {
+        setState(() => error =
+            'No pudimos abrir la imagen. Revisa los permisos e intenta otra vez.');
+      }
+    } finally {
+      pickerOpen = false;
+    }
+    final file = chosen;
+    if (file == null || !mounted) return;
+    setState(() {
+      picking = true;
+      analyzingImage = true;
+    });
+    try {
       if (await file.length() > 7 * 1024 * 1024) {
         throw const FormatException('Elige una foto de hasta 7 MB.');
       }
@@ -384,10 +399,15 @@ class _IntakePageState extends State<IntakePage> {
           imageBytes = bytes;
           source = 'IMAGEN';
         });
-        throw const FormatException(
-            kIsWeb
-                ? 'En el navegador no puedo leer la imagen sola. Pide ayuda por internet o escribe los datos.'
-                : 'En esta plataforma puedes pedir ayuda con la imagen o escribir los datos.');
+        // Sin lector en el aparato, la imagen se lee con la ayuda por internet,
+        // que ya se autorizó una vez.
+        if (consent && configured == true) {
+          await analyze(bytes: bytes);
+          return;
+        }
+        throw FormatException(!consent && configured == true
+            ? 'Marca el permiso de ayuda por internet para que lea la imagen, o escribe los datos.'
+            : 'La ayuda por internet no está disponible por ahora. Escribe los datos.');
       }
       if (widget.api.userId == null) {
         throw const FormatException(
@@ -494,7 +514,9 @@ class _IntakePageState extends State<IntakePage> {
             : 'La voz sin conexión no está disponible en español. Puedes escribir o autorizar la grabación alternativa por internet.');
         return;
       }
-      final use = await showDialog<bool>(
+      final use = kIsWeb
+          ? true
+          : await showDialog<bool>(
           context: context,
           builder: (c) => AlertDialog(
                   title: const Text('Transcribir con ayuda por internet'),
@@ -687,17 +709,27 @@ class _IntakePageState extends State<IntakePage> {
         wav.setRange(44, wav.length, chunks);
         await analyze(bytes: wav);
       } else {
-        setState(() => picking = true);
-        if (!await recorder.hasPermission()) {
+        setState(() {
+          picking = true;
+          preparingVoice = true;
+        });
+        final allowed = await recorder
+            .hasPermission()
+            .timeout(const Duration(seconds: 60), onTimeout: () => false);
+        if (!allowed) {
           throw const FormatException(
               'Permite usar el micrófono o escribe el registro.');
         }
         if (!mounted) return;
         chunks.clear();
-        final audio = await recorder.startStream(const RecordConfig(
-            encoder: AudioEncoder.pcm16bits,
-            sampleRate: 16000,
-            numChannels: 1));
+        final audio = await recorder
+            .startStream(const RecordConfig(
+                encoder: AudioEncoder.pcm16bits,
+                sampleRate: 16000,
+                numChannels: 1))
+            .timeout(const Duration(seconds: 15),
+                onTimeout: () => throw const FormatException(
+                    'El micrófono no respondió. Revisa el permiso del navegador e intenta otra vez.'));
         stream = audio.listen((data) {
           if (chunks.length < 1440000) chunks.addAll(data);
         }, onError: (Object e) {
@@ -714,6 +746,7 @@ class _IntakePageState extends State<IntakePage> {
         setState(() {
           recording = true;
           picking = false;
+          preparingVoice = false;
           seconds = 0;
           error = null;
         });
@@ -731,7 +764,12 @@ class _IntakePageState extends State<IntakePage> {
             : 'No pudimos grabar. Puedes escribir el registro.');
       }
     } finally {
-      if (mounted) setState(() => picking = false);
+      if (mounted) {
+        setState(() {
+          picking = false;
+          if (!nativeListening) preparingVoice = false;
+        });
+      }
     }
   }
 
