@@ -180,6 +180,30 @@ No se ha reconstruido, sobrescrito ni publicado `backend/web_build`.
 
 ## 6. Seguridad y límites
 
+### Preparar la Web para el servicio Express ya existente en Render
+
+Desde la raíz del proyecto, en Windows con Flutter instalado:
+
+```powershell
+.\tool\build-web-release.ps1 -GoogleWebClientId 'CLIENT_ID_WEB_PUBLICO' -PrepareBackend
+```
+
+Sustituir el marcador por el Client ID Web real, no por un Client Secret. El script
+compila release con `GOOGLE_WEB_CLIENT_ID` y la API HTTPS
+`https://hackathon2026-pinguinos.onrender.com/api/v1`, verifica ambos valores en el
+JavaScript generado y copia el resultado a `backend/web_build`, que es la carpeta
+que Express sirve. Se puede indicar otra API HTTPS con `-ApiBaseUrl`. Sin
+`-PrepareBackend` solo genera `build/web`, sin sustituir la carpeta publicable.
+No utiliza los JSON de pruebas con localhost ni pasa serverClientId a Web.
+
+Revisar y subir después los fuentes y `backend/web_build` regenerado con la
+autorización correspondiente. La compañera actualiza su servicio existente desde
+ese commit; no necesita crear otro despliegue ni ejecutar otra migración. Su
+backend debe tener Google habilitado y aceptar el mismo ID Web en
+`GOOGLE_CLIENT_IDS`; Google Cloud debe autorizar el origen HTTPS de la página.
+Cambiar únicamente variables de Express no modifica un Flutter Web ya compilado.
+El script no accede a Render ni a MySQL y no realiza commit, push o despliegue.
+
 El backend usa google-auth-library verifyIdToken con audiencias explícitas,
 firma, emisor y expiración; además exige sub, email_verified, iat y nonce. No
 acepta identidades o correos libres proporcionados por Flutter.
