@@ -2,6 +2,12 @@ import 'api_client.dart';
 import 'money.dart';
 import 'receipt_details.dart';
 
+/// El reconocimiento de voz escribe a veces "$200" en vez de "200 soles".
+/// Se convierte para que el importe se entienda igual.
+String _moneySymbols(String value) => value
+    .replaceAllMapped(RegExp(r'(?:US)?\$\s*(\d(?:[\d.,]*\d)?)'), (m) => '${m[1]} soles')
+    .replaceAllMapped(RegExp(r'(\d(?:[\d.,]*\d)?)\s*\$'), (m) => '${m[1]} soles');
+
 String _plain(String value) {
   var text = value.toLowerCase();
   for (final pair
@@ -249,7 +255,7 @@ class LocalRules {
   }
 
   Json interpret(String input, {String source = 'TEXTO', String? today}) {
-    final text = input.trim(),
+    final text = _moneySymbols(input.trim()),
         plain = _plain(text),
         date = today ?? limaToday();
     final image = source == 'IMAGEN';

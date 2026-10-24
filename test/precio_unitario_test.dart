@@ -47,6 +47,21 @@ void main() {
 
 void listaDeRenglones() {
   final rules = LocalRules();
+  group('importe escrito con símbolo', () {
+    for (final row in [
+      ['vendí \$200 de arroz', '20000', 'VENTA'],
+      ['Vendí \$ 200 de arroz', '20000', 'VENTA'],
+      ['gasté 35\$ en pasajes', '3500', 'GASTO_OPERATIVO'],
+      ['Vendí \$1,200.50 de arroz', '120050', 'VENTA'],
+    ]) {
+      test('entiende el monto: ${row[0]}', () {
+        final p = LocalRules().interpret(row[0]);
+        expect(p['intencion'], row[2]);
+        expect(p['monto_minor'], row[1]);
+      });
+    }
+  });
+
   group('lista de renglones con importe', () {
     test('importe primero y verbo repetido: Vendí 50 soles de arroz, vendí 10 soles de aceite', () {
       final p = rules.interpret('Vendí 50 soles de arroz, vendí 10 soles de aceite');
